@@ -20,6 +20,7 @@
       ctx.lineWidth = Math.max(1, (mini ? 0.6 : 1.2) / s * (mini ? 1 : 1)); ctx.strokeStyle = MID; ctx.stroke();
       ctx.strokeStyle = INK; ctx.lineWidth = Math.max(d.wallT, (mini ? 1 : 2) / s);
       [d.railL, d.railR].forEach((r) => { poly(ctx, r); ctx.stroke(); });
+      if (d.part.obstacle && root.TinyTMTMarks) { ctx.save(); ctx.translate(d.p.x, d.p.y); ctx.rotate(d.p.a * Math.PI / 180); root.TinyTMTMarks.draw(ctx, d.part, d.W, { wallT: d.wallT, px: 1 / s, color: '#ffd678' }); ctx.restore(); }
       if (!mini) {
         ctx.setLineDash([6 / s, 6 / s]); ctx.lineWidth = 1 / s; ctx.strokeStyle = MID; poly(ctx, d.center); ctx.stroke(); ctx.setLineDash([]);
         if (d.part.rise) { // chevrons uphill

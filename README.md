@@ -29,15 +29,41 @@ It's plain HTML/CSS/JS with no build step and no dependencies, and it works offl
 
 ## Sample tracks
 
-Five sample layouts ship with the app (**? menu → Sample tracks…**) and as files in `examples/`:
+Eight sample layouts ship with the app (**? menu → Sample tracks…**) and as files in `examples/`:
 
-| Track | What it teaches | Pieces |
+| Track | What it shows | Pieces |
 |---|---|---|
 | Rubber Duck Lagoon Loop | Beginner oval | 12 |
 | Sprocket Slalom Speedway | Swerves — steering precision | 16 |
 | Curb Cut Canyon Climb | Ramp up, raised deck, ramp down | 18 + 2 supports |
 | Big Wheel Boulevard | Double width, two chairs side by side | 11 (double) |
 | Figure Eight Overpass Speedway | Over/under crossing using lower-level straights | 24 + 4 supports |
+| Kerbside Notch Circuit | L-shape with an inside corner, closed by S121 adapters | 17 |
+| Everyday Barriers Loop | All five obstacle inserts | 14 |
+| Chamfer Plaza Sprint | 45° cut corners kept on grid by D141 diagonals | 16 |
+
+## Closure adapters
+
+With only 50 mm-step straights, a loop closes only if it is a rounded shape turning one way, or symmetric. These odd-length straights unlock more layouts. **The print models are still to be designed and published.**
+
+| Part | Length | Why |
+|---|---|---|
+| S121 | 121 mm | One single-lane track width. Every inside corner (a turn against the loop's direction, as in L, U or T shapes) leaves exactly one track width to make up. |
+| S236 | 236 mm | The same for double width. |
+| D71 | 70.7 mm (50√2) | At 45° it moves exactly 50 mm on both axes. |
+| D141 | 141.4 mm (100√2) | C45 + D141 + C45 lands exactly 100 mm beyond a plain C90 corner on both axes, so chamfered corners stay on the 50 mm grid. |
+
+## Obstacle inserts
+
+Drop-in replacements for a 250 mm straight, so they never affect whether a loop closes. Each one recreates an everyday barrier that wheelchair users meet. **The print models are still to be designed and published**, and the material estimates include a nominal extra allowance per insert.
+
+| Part | Barrier |
+|---|---|
+| Doorway pinch | Lane narrows to about 90 mm for 40 mm, like a narrow doorway |
+| Threshold bump | Low raised strip across the lane, like a door sill |
+| Rough surface | Textured floor, like gravel or cobbles |
+| Kerb step (no curb cut) | Raised kerb block across the lane — pair with ramps to show why curb cuts matter |
+| Cross-slope | Floor tilts sideways, like a driveway crossing a pavement |
 
 ## Keyboard
 
@@ -77,6 +103,7 @@ index.html                 app shell
 css/styles.css
 js/parts.js                parts catalogue (edit / extend here)
 js/geometry.js             piece geometry (poses, arcs, hit tests)
+js/marks.js                obstacle insert markings
 js/blueprint.js            blueprint PNG + thumbnails
 js/names.js                random title generator
 js/samples.js              built-in sample tracks

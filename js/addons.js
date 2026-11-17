@@ -25,7 +25,7 @@
   const list = [];
   const listeners = {};
   const TinyTMT = root.TinyTMT || (root.TinyTMT = {});
-  TinyTMT.version = '1.0.0';
+  TinyTMT.version = '1.3.0';
   TinyTMT._emit = (ev, data) => (listeners[ev] || []).forEach((fn) => { try { fn(data); } catch (e) { console.error('[TinyTMT add-on]', e); } });
   TinyTMT._on = (ev, fn) => { (listeners[ev] = listeners[ev] || []).push(fn); return () => { listeners[ev] = listeners[ev].filter((f) => f !== fn); }; };
   TinyTMT.addons = {

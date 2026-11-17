@@ -101,6 +101,7 @@
   }
   function shortLabel(part, p) {
     if (part.rise) return (part.rise > 0 ? '▲' : '▼') + (part.bedLength || part.length);
+    if (part.short) return part.short;
     if (part.type === 'straight') return (part.id.startsWith('L') ? 'L' : 'S') + part.length;
     return `${part.angle}°${p.dir === 'L' ? '↰' : '↱'}${part.ir}${part.style === 'digital' ? 'D' : ''}`;
   }
@@ -173,7 +174,7 @@
     if (part.type === 'straight') { const L = part.bedLength || part.length; area = L * w; wallLen = 2 * L; }
     else { const R = G.centerRadius(part, w), ri = R - w / 2, ro = R + w / 2, th = part.angle * G.D2R; area = th / 2 * (ro * ro - ri * ri); wallLen = th * (ri + ro); }
     const mm3 = area * s.floorThickness + wallLen * s.wallHeight * s.wallThickness + s.jointVolume * 1000;
-    const grams = mm3 / 1000 * s.density * s.solidity;
+    const grams = mm3 / 1000 * s.density * s.solidity + (part.extraG || 0) * (width === 'double' ? 1.8 : 1);
     return { grams, minutes: grams / s.gramsPerHour * 60 + s.overheadMin };
   }
   function estimate(part, width) {
@@ -219,7 +220,7 @@
     return { rows: list, supports: spots.length };
   }
   function sortKey(p) {
-    const g = { straight: 'a', curve: 'b', ramp: 'c' }[p.group] || 'd';
+    const g = { straight: 'a', adapter: 'b', curve: 'c', ramp: 'd', obstacle: 'e' }[p.group] || 'f';
     // curves: by inner radius, then widest turn first (90° → 15°), smooth before digital
     return p.type === 'curve' ? `${g}${String(p.ir).padStart(4, '0')}${p.style === 'digital' ? 1 : 0}${String(999 - p.angle).padStart(3, '0')}` : `${g}${String(p.length).padStart(4, '0')}`;
   }
@@ -227,14 +228,16 @@
   const IR_HUES = { 150: 172, 200: 265, 250: 325, 300: 122 };
   function familyOf(part) {
     if (part && part.type === 'curve') return { key: 'ir' + part.ir, label: `IR ${part.ir} mm`, hue: IR_HUES[part.ir] != null ? IR_HUES[part.ir] : (part.ir * 47) % 360 };
-    if (part && part.group === 'ramp') return { key: 'ramp', label: 'Ramps & levels', hue: 40 };
+    if (part && part.group === 'ramp') return { key: 'ramp', label: 'Ramps & levels', hue: 45 };
+    if (part && part.group === 'adapter') return { key: 'adapter', label: 'Closure adapters', hue: 205, sat: 0.3 };
+    if (part && part.group === 'obstacle') return { key: 'obstacle', label: 'Obstacle inserts', hue: 16 };
     return { key: 'straight', label: 'Straights', hue: 218 };
   }
   const famCache = {};
   function famColors(part) {
     const f = familyOf(part);
     return famCache[f.key + f.hue] || (famCache[f.key + f.hue] = {
-      hue: f.hue, accent: `hsl(${f.hue} 62% 45%)`, floor: `hsl(${f.hue} 78% 91%)`, wall: `hsl(${f.hue} 55% 28%)`, soft: `hsl(${f.hue} 80% 96%)`, edge: `hsla(${f.hue} 55% 28% / .45)`
+      hue: f.hue, accent: `hsl(${f.hue} ${62 * (f.sat || 1)}% 45%)`, floor: `hsl(${f.hue} ${78 * (f.sat || 1)}% 91%)`, wall: `hsl(${f.hue} ${55 * (f.sat || 1)}% 28%)`, soft: `hsl(${f.hue} ${80 * (f.sat || 1)}% 96%)`, edge: `hsla(${f.hue} ${55 * (f.sat || 1)}% 28% / .45)`
     });
   }
   function computeStats(out) {
@@ -557,7 +560,8 @@
     const wall = st.bad ? COL.badWall : raisedFlat ? COL.upWall : fam.wall;
     ctx.strokeStyle = wall; ctx.lineWidth = Math.max(d.wallT, 1.6 * px); ctx.lineCap = 'butt';
     poly(d.railL); ctx.stroke(); poly(d.railR); ctx.stroke();
-    if (settings.showCenterline && d.W * view.s > 18) { ctx.setLineDash([5 * px, 5 * px]); ctx.lineWidth = px; ctx.strokeStyle = COL.center; poly(d.center); ctx.stroke(); ctx.setLineDash([]); }
+    if (d.part.obstacle) { ctx.save(); ctx.translate(d.p.x, d.p.y); ctx.rotate(d.p.a * G.D2R); window.TinyTMTMarks.draw(ctx, d.part, d.W, { wallT: d.wallT, px, color: wall, laneWidth: settings.laneWidth }); ctx.restore(); }
+    if (settings.showCenterline && d.W * view.s > 18 && !d.part.obstacle) { ctx.setLineDash([5 * px, 5 * px]); ctx.lineWidth = px; ctx.strokeStyle = COL.center; poly(d.center); ctx.stroke(); ctx.setLineDash([]); }
     if (d.part.rise) {
       const m = d.center[Math.floor(d.center.length * 0.22)], dirUp = d.part.rise > 0 ? 1 : -1, L = d.W * 0.2;
       ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(d.headingMid * G.D2R); ctx.strokeStyle = wall; ctx.lineWidth = 2 * px;
@@ -669,6 +673,7 @@
         <dt>Run length</dt><dd>${Math.round(d.length)} mm</dd>
         <dt>Est. print</dt><dd>${Math.round(e.grams)} g · ${BP.fmtTime(e.minutes)}</dd>
         <dt>Source</dt><dd>${sourceLink(d.part.source)}</dd>
+        ${d.part.note ? `<dt></dt><dd class="note">${esc(d.part.note)}</dd>` : ''}
         ${d.part.nominal ? '<dt></dt><dd class="note">Nominal dimensions — verify against the STL.</dd>' : ''}
       </dl>
       <div class="row-btns"><button class="sbtn" data-act="rotate">⟳ Rotate</button>${d.part.type === 'curve' ? '<button class="sbtn" data-act="flip">⇋ Flip</button>' : ''}<button class="sbtn" data-act="chain">Select chain</button><button class="sbtn danger" data-act="delete">Delete</button></div>`;
@@ -700,7 +705,8 @@
       const b = document.createElement('button'), fam = famColors(p);
       b.className = 'pcard' + (p.id === ui.activePart ? ' on' : ''); b.dataset.part = p.id; b.title = p.name + (p.nominal ? ' (nominal dimensions)' : '');
       b.style.setProperty('--fam', fam.accent); b.style.setProperty('--fam-soft', fam.soft);
-      const meta = p.type === 'curve' ? `${p.angle}° · IR ${p.ir}${p.style === 'digital' ? ' · digital' : ''}` : p.rise ? `${p.rise > 0 ? '+' : ''}${p.rise} mm · ${p.length} plan` : `${p.length} mm`;
+      const meta = p.type === 'curve' ? `${p.angle}° · IR ${p.ir}${p.style === 'digital' ? ' · digital' : ''}` : p.rise ? `${p.rise > 0 ? '+' : ''}${p.rise} mm · ${p.length} plan` : p.obstacle ? `${p.length} mm insert` : `${Math.round(p.length * 10) / 10} mm`;
+      if (p.note) b.title += ' — ' + p.note;
       const title = p.type === 'curve' ? `${p.angle}° curve` : p.name;
       b.innerHTML = `${p.id === settings.defaultStraight || p.id === settings.defaultCurve ? '<span class="pdef">DEFAULT</span>' : ''}<canvas></canvas><div class="pname">${esc(title)}</div><div class="pmeta">${meta}</div>`;
       requestAnimationFrame(() => drawThumb($('canvas', b), p));
@@ -725,7 +731,10 @@
       if (grp.id === 'curve') {
         const irs = [...new Set(items.map((p) => p.ir))].sort((a, b) => a - b);
         irs.forEach((ir) => { const its = items.filter((p) => p.ir === ir); section(body, `Inner radius ${ir} mm`, famColors(its[0]), its, `Ø ${ir * 2}`); });
-      } else section(body, grp.id === 'ramp' ? 'Ramp beds & lower-level runs' : 'Straight lengths', famColors(items[0]), items);
+      } else {
+        const lbl = { ramp: 'Ramp beds & lower-level runs', adapter: 'Odd lengths that make loops close', obstacle: 'Everyday barriers · S250 footprint' }[grp.id] || 'Straight lengths';
+        section(body, lbl, famColors(items[0]), items);
+      }
       host.appendChild(det);
     });
   }
@@ -742,6 +751,7 @@
     pl(d.outline); c.closePath(); c.fillStyle = fam.floor; c.fill();
     c.strokeStyle = fam.wall; c.lineWidth = Math.max(w * 0.05, 1.5 / sc);
     pl(d.railL); c.stroke(); pl(d.railR); c.stroke();
+    if (part.obstacle) window.TinyTMTMarks.draw(c, part, w, { wallT: settings.wallThickness, px: 1 / sc, color: fam.wall, laneWidth: settings.laneWidth });
   }
   function startPaletteDrag(e, partId) {
     e.preventDefault();

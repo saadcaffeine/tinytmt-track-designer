@@ -1,0 +1,150 @@
+{
+ "format": "tinytmt-design",
+ "version": 1,
+ "id": "09d7fc3f4068",
+ "title": "Everyday Barriers Loop",
+ "created": "2026-11-17T06:59:03.991600+00:00",
+ "modified": "2026-11-17T06:59:03.991600+00:00",
+ "pieces": [
+  {
+   "id": "41a56b0b1a",
+   "part": "OB-DOOR",
+   "x": 600,
+   "y": 500,
+   "a": 0,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "5f650ee792",
+   "part": "OB-SILL",
+   "x": 850.0,
+   "y": 500.0,
+   "a": 0,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "dd972004a6",
+   "part": "OB-ROUGH",
+   "x": 1100.0,
+   "y": 500.0,
+   "a": 0,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "d96844b577",
+   "part": "C45-R200",
+   "x": 1350.0,
+   "y": 500.0,
+   "a": 0,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "d5dc4875ba",
+   "part": "C45-R200",
+   "x": 1534.201,
+   "y": 576.299,
+   "a": 45,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "4e8f52e889",
+   "part": "C45-R200",
+   "x": 1610.5,
+   "y": 760.5,
+   "a": 90,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "9cfcced031",
+   "part": "C45-R200",
+   "x": 1534.201,
+   "y": 944.701,
+   "a": 135,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "2499c4879f",
+   "part": "OB-KERB",
+   "x": 1350.0,
+   "y": 1021.0,
+   "a": 180,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "ff4895ce19",
+   "part": "OB-SLOPE",
+   "x": 1100.0,
+   "y": 1021.0,
+   "a": 180,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "e581cf26aa",
+   "part": "S250",
+   "x": 850.0,
+   "y": 1021.0,
+   "a": 180,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "f4d869b811",
+   "part": "C45-R200",
+   "x": 600.0,
+   "y": 1021.0,
+   "a": 180,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "524216e135",
+   "part": "C45-R200",
+   "x": 415.799,
+   "y": 944.701,
+   "a": 225,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "1ccb28077e",
+   "part": "C45-R200",
+   "x": 339.5,
+   "y": 760.5,
+   "a": 270,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  },
+  {
+   "id": "d3148fdc7e",
+   "part": "C45-R200",
+   "x": 415.799,
+   "y": 576.299,
+   "a": 315,
+   "z": 0,
+   "dir": "R",
+   "width": "single"
+  }
+ ]
+}

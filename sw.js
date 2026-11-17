@@ -1,8 +1,8 @@
 /* Offline cache for TinyTMT track designer. Bump VERSION when files change. */
-const VERSION = 'tinytmt-v1.2.0';
+const VERSION = 'tinytmt-v1.3.0';
 const FILES = [
   './', 'index.html', 'css/styles.css', 'icon.svg', 'manifest.webmanifest',
-  'js/parts.js', 'js/names.js', 'js/geometry.js', 'js/blueprint.js', 'js/samples.js', 'js/addons.js', 'js/app.js',
+  'js/parts.js', 'js/names.js', 'js/geometry.js', 'js/marks.js', 'js/blueprint.js', 'js/samples.js', 'js/addons.js', 'js/app.js',
   'addons/view3d-placeholder.js'
 ];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
