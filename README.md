@@ -1,5 +1,7 @@
 # TinyTMT track designer — by SalvageGarden Makerspace
 
+**▶ Live app: [saadcaffeine.github.io/tinytmt-track-designer](https://saadcaffeine.github.io/tinytmt-track-designer/)** — runs in any modern browser, works offline once loaded, and can be installed as an app.
+
 A browser-based layout tool for **Mini TMT obstacle courses**: scaled-down, motorised, 3D-printed versions of the open-source *Toddler Mobility Trainer* (TMT) wheelchair for kids, raced remotely around a course. The obstacles stand in for the everyday barriers wheelchair users face. The course is used for corporate team-building and outreach, and it raises awareness and funds for SalvageGarden's assistive-tech projects.
 
 Tracks are built from 3D-printable pieces in the **Tamiya Mini 4WD form factor** (115 mm lane, 50 mm walls), based on rucdoc's single-lane packs:
@@ -91,7 +93,7 @@ Material and time are estimated from piece geometry: floor and wall volume × so
 
 1. Push this folder to a repository (the files live at the repo root).
 2. Go to **Settings → Pages → Deploy from a branch**, then choose `main` and `/ (root)`.
-3. Open `https://<user>.github.io/<repo>/`. After the first visit, the service worker (`sw.js`) caches the app for offline use. Bump `VERSION` in `sw.js` when you release changes.
+3. Open `https://<user>.github.io/<repo>/` (this repo is live at https://saadcaffeine.github.io/tinytmt-track-designer/). After the first visit, the service worker (`sw.js`) caches the app for offline use. Bump `VERSION` in `sw.js` when you release changes.
 
 `tinytmt-standalone.html` is a single-file build that you can open straight from disk with no server.
 To rebuild it after changing anything, run `python3 tools/build_standalone.py`.
