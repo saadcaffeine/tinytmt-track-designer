@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TinyTMT track designer by SalvageGarden Makerspace</title>
+  <meta name="description" content="Design Mini TMT obstacle courses from 3D-printable Mini 4WD-format track pieces. Bill of materials, print time and PETG estimates, blueprint PNG export. Works offline." />
+  <meta name="theme-color" content="#14213d" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" title="TinyTMT track designer by SalvageGarden Makerspace">
+      <img src="icon.svg" alt="" class="brand-mark" />
+      <div class="brand-text">
+        <strong>TinyTMT</strong> <span>track designer</span>
+        <small>by SalvageGarden Makerspace</small>
+      </div>
+    </div>
+
+    <div class="title-wrap">
+      <input id="trackTitle" class="track-title" type="text" spellcheck="false" aria-label="Track title" maxlength="80" />
+      <button class="icon-btn" id="btnRerollTitle" title="New random title" aria-label="New random title">🎲</button>
+      <span class="dirty-dot" id="dirtyDot" title="Unsaved changes"></span>
+    </div>
+
+    <nav class="actions" aria-label="File">
+      <button class="btn" id="btnNew" title="New design">New</button>
+      <button class="btn" id="btnOpen" title="Open saved designs (Ctrl+O)">Open</button>
+      <button class="btn" id="btnSave" title="Save to this browser (Ctrl+S)">Save</button>
+      <div class="menu">
+        <button class="btn" id="btnExport" aria-haspopup="true" aria-expanded="false">Export ▾</button>
+        <div class="menu-list" id="exportMenu" role="menu" hidden>
+          <button role="menuitem" data-export="png">Blueprint PNG <kbd>Ctrl E</kbd></button>
+          <button role="menuitem" data-export="json">Design file (.json)</button>
+          <button role="menuitem" data-export="csv">BoM (.csv)</button>
+          <hr />
+          <button role="menuitem" data-export="import">Import design file…</button>
+        </div>
+      </div>
+      <span class="addon-slot" id="addonSlot"></span>
+      <button class="icon-btn" id="btnSettings" title="Settings" aria-label="Settings">⚙</button>
+      <button class="icon-btn" id="btnHelp" title="Keyboard shortcuts (?)" aria-label="Help">?</button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <aside class="palette" aria-label="Track pieces">
+      <div class="palette-controls">
+        <div class="seg" role="radiogroup" aria-label="Track width">
+          <button data-width="single" class="on" title="Single lane (W)">Single</button>
+          <button data-width="double" title="Double width, no lane separator (W)">Double</button>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="Curve direction">
+          <button data-dir="L" title="Curve left (F)">↰ Left</button>
+          <button data-dir="R" class="on" title="Curve right (F)">Right ↱</button>
+        </div>
+        <input type="search" id="partSearch" placeholder="Filter pieces…" aria-label="Filter pieces" />
+      </div>
+      <div id="paletteGroups" class="palette-groups"></div>
+      <p class="palette-tip">Click a piece then click the grid, or drag it onto the canvas. Pieces snap to open track ends.</p>
+    </aside>
+
+    <section class="stage" aria-label="Design canvas">
+      <div class="toolbar" role="toolbar" aria-label="Tools">
+        <button class="tool" data-tool="select" title="Select & move (V)">⬉<span>Select</span></button>
+        <button class="tool on" data-tool="place" title="Place pieces (P)">✚<span>Place</span></button>
+        <span class="sep"></span>
+        <button class="tool" id="tRotate" title="Rotate (R / Shift+R)">⟳</button>
+        <button class="tool" id="tFlip" title="Flip curve direction (F)">⇋</button>
+        <button class="tool" id="tDelete" title="Delete (Del)">🗑</button>
+        <span class="sep"></span>
+        <button class="tool" id="tUndo" title="Undo (Ctrl+Z)">↶</button>
+        <button class="tool" id="tRedo" title="Redo (Ctrl+Shift+Z)">↷</button>
+        <span class="sep"></span>
+        <button class="tool" id="tZoomOut" title="Zoom out (-)">−</button>
+        <button class="tool zoom-label" id="tZoomFit" title="Zoom to fit (0)">100%</button>
+        <button class="tool" id="tZoomIn" title="Zoom in (+)">+</button>
+      </div>
+      <div class="hud" id="hud"></div>
+      <canvas id="canvas" tabindex="0" aria-label="Track design canvas"></canvas>
+    </section>
+
+    <aside class="side" aria-label="Details">
+      <div class="tabs" role="tablist">
+        <button role="tab" class="on" data-tab="bom">Bill of materials</button>
+        <button role="tab" data-tab="inspect">Inspector</button>
+      </div>
+      <div class="tab-body" id="tab-bom"></div>
+      <div class="tab-body" id="tab-inspect" hidden></div>
+    </aside>
+  </main>
+
+  <footer class="statusbar" aria-live="polite">
+    <div class="stat"><span>Track length</span><strong id="stLength">0.00 m</strong></div>
+    <div class="stat"><span>Pieces</span><strong id="stPieces">0</strong></div>
+    <div class="stat"><span>Est. print time</span><strong id="stTime">0 h</strong></div>
+    <div class="stat"><span>Est. PETG</span><strong id="stMaterial">0 g</strong></div>
+    <div class="stat stat-flags" id="stFlags"></div>
+    <div class="stat stat-right"><span id="stCursor">—</span></div>
+  </footer>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header><h2 id="modalTitle"></h2><button class="icon-btn" id="modalClose" aria-label="Close">✕</button></header>
+      <div class="modal-body" id="modalBody"></div>
+      <footer class="modal-foot" id="modalFoot"></footer>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <input type="file" id="fileInput" accept=".json,application/json" hidden />
+
+  <script src="js/parts.js"></script>
+  <script src="js/names.js"></script>
+  <script src="js/geometry.js"></script>
+  <script src="js/blueprint.js"></script>
+  <script src="js/samples.js"></script>
+  <script src="js/addons.js"></script>
+  <script src="js/app.js"></script>
+  <script src="addons/view3d-placeholder.js"></script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

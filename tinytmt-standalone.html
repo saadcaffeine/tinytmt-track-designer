@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TinyTMT track designer by SalvageGarden Makerspace</title>
+  <meta name="description" content="Design Mini TMT obstacle courses from 3D-printable Mini 4WD-format track pieces. Bill of materials, print time and PETG estimates, blueprint PNG export. Works offline." />
+  <meta name="theme-color" content="#14213d" />
+  <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxNDIxM2QiLz4KICA8cGF0aCBkPSJNMTAgNDYgSDMwIEExNiAxNiAwIDAgMCA0NiAzMCBWMTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJlOWU2YSIgc3Ryb2tlLXdpZHRoPSIxMiIgc3Ryb2tlLWxpbmVjYXA9ImJ1dHQiLz4KICA8cGF0aCBkPSJNMTAgNDYgSDMwIEExNiAxNiAwIDAgMCA0NiAzMCBWMTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2RjZTdmYiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtZGFzaGFycmF5PSIzIDMiLz4KICA8Y2lyY2xlIGN4PSIyMCIgY3k9IjIyIiByPSI4IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmQ2NzgiIHN0cm9rZS13aWR0aD0iMy41Ii8+CiAgPGNpcmNsZSBjeD0iMjAiIGN5PSIyMiIgcj0iMiIgZmlsbD0iI2ZmZDY3OCIvPgo8L3N2Zz4K" type="image/svg+xml" />
+    <style>
+:root {
+  --navy: #14213d;
+  --navy-2: #1d2f55;
+  --ink: #1b2333;
+  --muted: #667085;
+  --line: #dde3ec;
+  --panel: #ffffff;
+  --bg: #f3f5f9;
+  --accent: #2f7cf6;
+  --accent-soft: #e6efff;
+  --green: #2e9e6a;
+  --amber: #e69500;
+  --red: #d64545;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 12px rgba(16, 24, 40, .06);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { display: grid; grid-template-rows: 52px 1fr 44px; background: var(--bg); overflow: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; }
+kbd { font: 11px ui-monospace, Menlo, Consolas, monospace; background: #eef1f6; border: 1px solid #d3d9e3; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: #475467; }
+
+/* Top bar */
+.topbar { display: flex; align-items: center; gap: 16px; padding: 0 12px; background: var(--navy); color: #fff; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand-mark { width: 30px; height: 30px; }
+.brand-text { line-height: 1.05; white-space: nowrap; }
+.brand-text strong { font-size: 16px; letter-spacing: .2px; }
+.brand-text span { font-size: 14px; opacity: .85; }
+.brand-text small { display: block; font-size: 11px; opacity: .65; }
+.title-wrap { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+.track-title { width: min(440px, 100%); background: transparent; border: 1px solid transparent; color: #fff; font-size: 17px; font-weight: 600; text-align: center; padding: 6px 10px; border-radius: 8px; }
+.track-title:hover { border-color: rgba(255,255,255,.2); }
+.track-title:focus { outline: none; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.4); }
+.dirty-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); visibility: hidden; }
+.dirty-dot.on { visibility: visible; }
+.actions { display: flex; align-items: center; gap: 6px; }
+.btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 13px; }
+.btn:hover { background: rgba(255,255,255,.16); }
+.btn.primary { background: var(--accent); border-color: var(--accent); }
+.icon-btn { background: transparent; border: 1px solid transparent; color: inherit; width: 32px; height: 32px; border-radius: 8px; font-size: 16px; display: inline-grid; place-items: center; }
+.icon-btn:hover { background: rgba(127,127,127,.15); }
+.addon-btn { display: inline-flex; align-items: center; gap: 6px; }
+.pill { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; background: var(--amber); color: #1b1300; border-radius: 99px; padding: 1px 6px; font-weight: 700; }
+.menu { position: relative; }
+.menu-list { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; color: var(--ink); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.18); padding: 6px; min-width: 230px; z-index: 30; }
+.menu-list button { display: flex; justify-content: space-between; width: 100%; text-align: left; padding: 8px 10px; background: none; border: 0; border-radius: 6px; font-size: 13px; }
+.menu-list button:hover { background: var(--accent-soft); }
+.menu-list hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 250px 1fr 320px; min-height: 0; }
+.palette, .side { background: var(--panel); min-height: 0; overflow: auto; }
+.palette { border-right: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.side { border-left: 1px solid var(--line); display: flex; flex-direction: column; }
+.palette-controls { display: grid; gap: 8px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: #eef1f6; border-radius: 8px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 6px 4px; border-radius: 6px; font-size: 12.5px; color: #475467; }
+.seg button.on { background: #fff; color: var(--ink); box-shadow: var(--shadow); font-weight: 600; }
+#partSearch { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 13px; }
+.palette-groups { display: grid; gap: 6px; }
+.pgroup > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); padding: 6px 2px; }
+.pgroup > summary::-webkit-details-marker { display: none; }
+.pgroup > summary::before { content: '▸'; margin-right: 6px; transition: transform .15s; }
+.pgroup[open] > summary::before { transform: rotate(90deg); }
+.pgroup > summary .grp-label { flex: 1; }
+.pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pcard { position: relative; border: 1px solid var(--line); background: #fbfcfe; border-radius: 9px; padding: 6px 6px 5px; text-align: left; touch-action: none; user-select: none; transition: border-color .1s, box-shadow .1s, transform .08s; }
+.pcard:hover { border-color: #b8c6dc; box-shadow: var(--shadow); }
+.pcard:active { transform: scale(.98); }
+.pcard.on { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 2px rgba(47,124,246,.18); }
+.pcard canvas { width: 100%; height: 52px; display: block; }
+.pcard .pname { font-size: 11.5px; font-weight: 600; line-height: 1.2; margin-top: 3px; }
+.pcard .pmeta { font-size: 10.5px; color: var(--muted); }
+.pcard .pdef { position: absolute; top: 4px; right: 5px; font-size: 9px; font-weight: 700; color: var(--green); }
+.palette-tip { font-size: 11.5px; color: var(--muted); margin: 4px 0 0; line-height: 1.4; }
+
+/* Stage */
+.stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+#canvas { width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
+.toolbar { position: absolute; top: 10px; left: 10px; display: flex; align-items: center; gap: 2px; background: #fff; border-radius: 10px; box-shadow: var(--shadow); padding: 4px; z-index: 5; }
+.tool { min-width: 32px; height: 32px; border: 0; background: transparent; border-radius: 7px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 7px; color: #344054; }
+.tool span { font-size: 12.5px; }
+.tool:hover { background: #f0f3f8; }
+.tool.on { background: var(--accent-soft); color: var(--accent); }
+.tool:disabled { opacity: .35; cursor: default; }
+.tool.zoom-label { font-size: 12px; min-width: 52px; font-variant-numeric: tabular-nums; }
+.sep { width: 1px; height: 20px; background: var(--line); margin: 0 3px; }
+.hud { position: absolute; left: 10px; bottom: 10px; z-index: 5; background: rgba(20,33,61,.88); color: #fff; font-size: 12px; padding: 7px 10px; border-radius: 8px; pointer-events: none; max-width: 70%; line-height: 1.5; }
+.hud b { color: #9cc3ff; }
+.hud kbd { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.25); color: #fff; }
+
+/* Side panel */
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tabs button { flex: 1; background: none; border: 0; padding: 12px 6px; font-size: 13px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; }
+.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
+.tab-body { padding: 12px; overflow: auto; }
+.bom-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.bom-table th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 700; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.bom-table td { padding: 7px 4px; border-bottom: 1px solid #eef1f6; vertical-align: top; }
+.bom-table td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bom-table tfoot td { font-weight: 700; border-top: 2px solid var(--line); border-bottom: 0; }
+.bom-table .sub { display: block; font-size: 11px; color: var(--muted); }
+.bom-table a { color: var(--accent); text-decoration: none; }
+.qty { display: inline-block; min-width: 26px; text-align: center; background: var(--navy); color: #fff; border-radius: 6px; font-weight: 700; padding: 1px 4px; }
+.note { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+.empty { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 10px; }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 10px; font-size: 13px; align-items: center; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+.row-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.sbtn { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; }
+.sbtn:hover { border-color: #b8c6dc; background: #f8fafc; }
+.sbtn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.sbtn.danger { color: var(--red); }
+
+/* Status bar */
+.statusbar { display: flex; align-items: center; gap: 4px; padding: 0 10px; background: #fff; border-top: 1px solid var(--line); font-size: 12.5px; overflow: hidden; }
+.stat { display: flex; align-items: baseline; gap: 7px; padding: 0 12px; border-right: 1px solid var(--line); white-space: nowrap; }
+.stat span { color: var(--muted); }
+.stat strong { font-variant-numeric: tabular-nums; font-size: 14px; }
+.stat-flags { gap: 6px; border-right: 0; }
+.flag { font-size: 11.5px; padding: 2px 8px; border-radius: 99px; background: #eef1f6; color: #475467; }
+.flag.ok { background: #e3f5ec; color: #1d7a4f; }
+.flag.warn { background: #fff3db; color: #8a5a00; }
+.flag.bad { background: #fde7e7; color: #a32727; }
+.stat-right { margin-left: auto; border-right: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Modal */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(16, 24, 40, .45); display: grid; place-items: center; z-index: 50; padding: 20px; }
+.modal { background: #fff; border-radius: 14px; width: min(860px, 100%); max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,.3); }
+.modal.small { width: min(440px, 100%); }
+.modal > header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.modal h2 { font-size: 16px; margin: 0; }
+.modal-body { padding: 16px 18px; overflow: auto; font-size: 13.5px; line-height: 1.5; }
+.modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); }
+.modal-foot:empty { display: none; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px 16px; }
+.field { display: grid; gap: 4px; font-size: 12.5px; }
+.field label { font-weight: 600; }
+.field small { color: var(--muted); font-size: 11px; }
+.field input, .field select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; font: inherit; font-size: 13px; }
+.field.check { grid-template-columns: auto 1fr; align-items: center; }
+.settings-tabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+.settings-tabs button { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 5px 12px; font-size: 12.5px; }
+.settings-tabs button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+.parts-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.parts-table th, .parts-table td { padding: 4px; border-bottom: 1px solid #eef1f6; text-align: left; }
+.parts-table input[type=number] { width: 70px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 5px; font: inherit; }
+.parts-table input[type=text] { width: 150px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 5px; font: inherit; }
+.lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.lib-card { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+.lib-card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #0f4c81; display: block; }
+.lib-card .meta { padding: 8px 10px; font-size: 12px; color: var(--muted); }
+.lib-card .meta strong { display: block; color: var(--ink); font-size: 13.5px; margin-bottom: 2px; }
+.lib-card .row-btns { padding: 0 10px 10px; margin-top: 0; }
+.shortcuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 4px 24px; }
+.shortcuts div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px dashed #eef1f6; font-size: 13px; }
+
+.toast { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 9px 16px; border-radius: 10px; font-size: 13px; z-index: 60; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+.drag-ghost { position: fixed; pointer-events: none; z-index: 70; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 99px; transform: translate(12px, 12px); }
+
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: 210px 1fr 270px; }
+  .brand-text span, .brand-text small { display: none; }
+}
+@media (max-width: 800px) {
+  .layout { grid-template-columns: 1fr; grid-template-rows: 1fr 170px; }
+  .palette { grid-row: 2; border: 0; border-top: 1px solid var(--line); }
+  .pgrid { grid-template-columns: repeat(4, 1fr); }
+  .title-wrap { display: none; }
+  .side { display: none; }
+  .actions .btn { padding: 6px 8px; }
+}
+
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" title="TinyTMT track designer by SalvageGarden Makerspace">
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxNDIxM2QiLz4KICA8cGF0aCBkPSJNMTAgNDYgSDMwIEExNiAxNiAwIDAgMCA0NiAzMCBWMTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJlOWU2YSIgc3Ryb2tlLXdpZHRoPSIxMiIgc3Ryb2tlLWxpbmVjYXA9ImJ1dHQiLz4KICA8cGF0aCBkPSJNMTAgNDYgSDMwIEExNiAxNiAwIDAgMCA0NiAzMCBWMTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2RjZTdmYiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtZGFzaGFycmF5PSIzIDMiLz4KICA8Y2lyY2xlIGN4PSIyMCIgY3k9IjIyIiByPSI4IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmQ2NzgiIHN0cm9rZS13aWR0aD0iMy41Ii8+CiAgPGNpcmNsZSBjeD0iMjAiIGN5PSIyMiIgcj0iMiIgZmlsbD0iI2ZmZDY3OCIvPgo8L3N2Zz4K" alt="" class="brand-mark" />
+      <div class="brand-text">
+        <strong>TinyTMT</strong> <span>track designer</span>
+        <small>by SalvageGarden Makerspace</small>
+      </div>
+    </div>
+
+    <div class="title-wrap">
+      <input id="trackTitle" class="track-title" type="text" spellcheck="false" aria-label="Track title" maxlength="80" />
+      <button class="icon-btn" id="btnRerollTitle" title="New random title" aria-label="New random title">🎲</button>
+      <span class="dirty-dot" id="dirtyDot" title="Unsaved changes"></span>
+    </div>
+
+    <nav class="actions" aria-label="File">
+      <button class="btn" id="btnNew" title="New design">New</button>
+      <button class="btn" id="btnOpen" title="Open saved designs (Ctrl+O)">Open</button>
+      <button class="btn" id="btnSave" title="Save to this browser (Ctrl+S)">Save</button>
+      <div class="menu">
+        <button class="btn" id="btnExport" aria-haspopup="true" aria-expanded="false">Export ▾</button>
+        <div class="menu-list" id="exportMenu" role="menu" hidden>
+          <button role="menuitem" data-export="png">Blueprint PNG <kbd>Ctrl E</kbd></button>
+          <button role="menuitem" data-export="json">Design file (.json)</button>
+          <button role="menuitem" data-export="csv">BoM (.csv)</button>
+          <hr />
+          <button role="menuitem" data-export="import">Import design file…</button>
+        </div>
+      </div>
+      <span class="addon-slot" id="addonSlot"></span>
+      <button class="icon-btn" id="btnSettings" title="Settings" aria-label="Settings">⚙</button>
+      <button class="icon-btn" id="btnHelp" title="Keyboard shortcuts (?)" aria-label="Help">?</button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <aside class="palette" aria-label="Track pieces">
+      <div class="palette-controls">
+        <div class="seg" role="radiogroup" aria-label="Track width">
+          <button data-width="single" class="on" title="Single lane (W)">Single</button>
+          <button data-width="double" title="Double width, no lane separator (W)">Double</button>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="Curve direction">
+          <button data-dir="L" title="Curve left (F)">↰ Left</button>
+          <button data-dir="R" class="on" title="Curve right (F)">Right ↱</button>
+        </div>
+        <input type="search" id="partSearch" placeholder="Filter pieces…" aria-label="Filter pieces" />
+      </div>
+      <div id="paletteGroups" class="palette-groups"></div>
+      <p class="palette-tip">Click a piece then click the grid, or drag it onto the canvas. Pieces snap to open track ends.</p>
+    </aside>
+
+    <section class="stage" aria-label="Design canvas">
+      <div class="toolbar" role="toolbar" aria-label="Tools">
+        <button class="tool" data-tool="select" title="Select & move (V)">⬉<span>Select</span></button>
+        <button class="tool on" data-tool="place" title="Place pieces (P)">✚<span>Place</span></button>
+        <span class="sep"></span>
+        <button class="tool" id="tRotate" title="Rotate (R / Shift+R)">⟳</button>
+        <button class="tool" id="tFlip" title="Flip curve direction (F)">⇋</button>
+        <button class="tool" id="tDelete" title="Delete (Del)">🗑</button>
+        <span class="sep"></span>
+        <button class="tool" id="tUndo" title="Undo (Ctrl+Z)">↶</button>
+        <button class="tool" id="tRedo" title="Redo (Ctrl+Shift+Z)">↷</button>
+        <span class="sep"></span>
+        <button class="tool" id="tZoomOut" title="Zoom out (-)">−</button>
+        <button class="tool zoom-label" id="tZoomFit" title="Zoom to fit (0)">100%</button>
+        <button class="tool" id="tZoomIn" title="Zoom in (+)">+</button>
+      </div>
+      <div class="hud" id="hud"></div>
+      <canvas id="canvas" tabindex="0" aria-label="Track design canvas"></canvas>
+    </section>
+
+    <aside class="side" aria-label="Details">
+      <div class="tabs" role="tablist">
+        <button role="tab" class="on" data-tab="bom">Bill of materials</button>
+        <button role="tab" data-tab="inspect">Inspector</button>
+      </div>
+      <div class="tab-body" id="tab-bom"></div>
+      <div class="tab-body" id="tab-inspect" hidden></div>
+    </aside>
+  </main>
+
+  <footer class="statusbar" aria-live="polite">
+    <div class="stat"><span>Track length</span><strong id="stLength">0.00 m</strong></div>
+    <div class="stat"><span>Pieces</span><strong id="stPieces">0</strong></div>
+    <div class="stat"><span>Est. print time</span><strong id="stTime">0 h</strong></div>
+    <div class="stat"><span>Est. PETG</span><strong id="stMaterial">0 g</strong></div>
+    <div class="stat stat-flags" id="stFlags"></div>
+    <div class="stat stat-right"><span id="stCursor">—</span></div>
+  </footer>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header><h2 id="modalTitle"></h2><button class="icon-btn" id="modalClose" aria-label="Close">✕</button></header>
+      <div class="modal-body" id="modalBody"></div>
+      <footer class="modal-foot" id="modalFoot"></footer>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <input type="file" id="fileInput" accept=".json,application/json" hidden />
+
+  <script>
+/*
+ * TinyTMT track designer — parts catalogue
+ *
+ * Pieces follow the Tamiya Mini 4WD form factor (115 mm lane, 50 mm walls)
+ * and the two rucdoc single-lane packs on MakerWorld:
+ *   - Mini 4WD Single Lane Modular Ramp Set   https://makerworld.com/en/models/1134169
+ *   - Mini4wd Single Lane Curve track pack    https://makerworld.com/en/models/1132759
+ *
+ * NOTE: dimensions marked `nominal` are best estimates from the model
+ * descriptions (e.g. "IR" = inner radius, 250/150 mm ramp beds, 246/147 mm
+ * lower-level sections). Measure your printed parts / STLs and adjust in
+ * Settings → Parts, or edit this file and open a pull request.
+ *
+ * Fields
+ *   id        unique id (also used in saved designs and the BoM)
+ *   name      display name
+ *   group     palette group: 'straight' | 'curve' | 'ramp'
+ *   type      geometry: 'straight' | 'curve'
+ *   length    straight: plan (top-view) length in mm
+ *   ir        curve: inner radius in mm (inside edge of the track)
+ *   angle     curve: sweep in degrees
+ *   style     curve: 'smooth' | 'digital' (faceted)
+ *   rise      mm of elevation change across the piece (ramps)
+ *   bedLength ramps: actual (sloped) length of the track bed
+ *   bomAs     print this part id instead (e.g. a ramp bed is a normal straight)
+ *   source    'ramp' | 'curve' | 'custom'
+ *   cycleStraight / cycleCurve  included in ←/→ or ↑/↓ arrow cycling
+ *   gramsOverride / minutesOverride  optional slicer values per single-width piece
+ */
+(function (root) {
+  const SRC = {
+    ramp: {
+      label: 'Single Lane Modular Ramp Set (rucdoc)',
+      url: 'https://makerworld.com/en/models/1134169-mini-4wd-single-lane-modular-ramp-set'
+    },
+    curve: {
+      label: 'Single Lane Curve Track Pack (rucdoc)',
+      url: 'https://makerworld.com/en/models/1132759-mini4wd-single-lane-curve-track-pack'
+    },
+    straight: {
+      label: 'Single Lane Mini 4wd Track, 50–400 mm (rucdoc)',
+      url: 'https://thangs.com/designer/rucdoc/3d-model/Single%20Lane%20Mini%204wd%20Track-921509'
+    },
+    custom: { label: 'Custom part', url: '' }
+  };
+
+  const straights = [50, 100, 150, 200, 250, 300, 400].map((L) => ({
+    id: 'S' + L,
+    name: 'Straight ' + L,
+    group: 'straight',
+    type: 'straight',
+    length: L,
+    source: L === 150 || L === 250 ? 'ramp' : 'straight',
+    cycleStraight: [100, 150, 200, 250, 300].includes(L),
+    nominal: L !== 150 && L !== 250
+  }));
+
+  const curves = [];
+  [150, 200, 250, 300].forEach((ir) => {
+    [15, 30, 45, 90].forEach((ang) => {
+      curves.push({
+        id: `C${ang}-R${ir}`,
+        name: `Curve ${ang}° IR${ir}`,
+        group: 'curve',
+        type: 'curve',
+        ir,
+        angle: ang,
+        style: 'smooth',
+        source: 'curve',
+        cycleCurve: ir === 200 || (ang === 45 && (ir === 150 || ir === 300)),
+        nominal: true
+      });
+    });
+  });
+  curves.push({
+    id: 'C45-R200-D', name: 'Curve 45° IR200 (digital)', group: 'curve', type: 'curve',
+    ir: 200, angle: 45, style: 'digital', source: 'curve', cycleCurve: false, nominal: true
+  });
+
+  // Ramp beds are the standard 250/150 straights laid on angled supports.
+  // The set's lower-level sections are 246/147 mm "due to how triangles work",
+  // i.e. the plan projection of a sloped bed: cos θ = 246/250 → θ ≈ 10.3°.
+  const rampRise250 = Math.round(Math.sqrt(250 * 250 - 246 * 246)); // ≈ 44 mm
+  const rampRise150 = Math.round(Math.sqrt(150 * 150 - 147 * 147)); // ≈ 30 mm
+  const ramps = [
+    { id: 'RU250', name: 'Ramp up (250 bed)', group: 'ramp', type: 'straight', length: 246, bedLength: 250, rise: rampRise250, bomAs: 'S250', source: 'ramp', nominal: true },
+    { id: 'RD250', name: 'Ramp down (250 bed)', group: 'ramp', type: 'straight', length: 246, bedLength: 250, rise: -rampRise250, bomAs: 'S250', source: 'ramp', nominal: true },
+    { id: 'RU150', name: 'Ramp up (150 bed)', group: 'ramp', type: 'straight', length: 147, bedLength: 150, rise: rampRise150, bomAs: 'S150', source: 'ramp', nominal: true },
+    { id: 'RD150', name: 'Ramp down (150 bed)', group: 'ramp', type: 'straight', length: 147, bedLength: 150, rise: -rampRise150, bomAs: 'S150', source: 'ramp', nominal: true },
+    { id: 'L246', name: 'Lower-level straight 246', group: 'ramp', type: 'straight', length: 246, source: 'ramp' },
+    { id: 'L147', name: 'Lower-level straight 147', group: 'ramp', type: 'straight', length: 147, source: 'ramp' }
+  ];
+
+  const DEFAULT_PARTS = [...straights, ...curves, ...ramps];
+
+  root.TinyTMTParts = {
+    SOURCES: SRC,
+    DEFAULT_PARTS,
+    GROUPS: [
+      { id: 'straight', label: 'Straights', hint: '← →' },
+      { id: 'curve', label: 'Curves', hint: '↑ ↓' },
+      { id: 'ramp', label: 'Ramps & levels', hint: '' }
+    ],
+    DEFAULT_STRAIGHT: 'S250',
+    DEFAULT_CURVE: 'C45-R200'
+  };
+})(window);
+
+</script>
+  <script>
+/* Random kart-racing-flavoured track titles (original names, community-inspired). */
+(function (root) {
+  const flavour = [
+    'Banana', 'Shell Shock', 'Rainbow', 'Mushroom', 'Thunder', 'Bullet', 'Coin', 'Turbo', 'Drift',
+    'Boost', 'Lightning', 'Starlight', 'Spiny', 'Cocoa', 'Sherbet', 'Biscuit', 'Bonbon', 'Lava',
+    'Frosty', 'Cloudtop', 'Sunshine', 'Moonlit', 'Pixel', 'Nitro', 'Wobbly', 'Bouncy', 'Twisty',
+    'Jelly', 'Waffle', 'Pudding', 'Cheese Wheel', 'Kiwi', 'Mango', 'Bubblegum', 'Comet', 'Meteor',
+    'Bolt', 'Ramp-a-Lamp', 'Curb Cut', 'Big Wheel', 'Tiny Tread', 'Hubcap', 'Spoke', 'Sprocket',
+    'Gearbox', 'Rubber Duck', 'Wiggle', 'Zoom Zoom', 'Golden', 'Crystal', 'Neon', 'Dino', 'Sprout'
+  ];
+  const place = [
+    'Meadows', 'Canyon', 'Castle', 'Cove', 'Bay', 'Peaks', 'Lagoon', 'Valley', 'Harbour', 'Jungle',
+    'Desert', 'Ruins', 'Galaxy', 'Garden', 'Factory', 'Town', 'Bridge', 'Falls', 'Glacier', 'Volcano',
+    'Docks', 'Plaza', 'Alley', 'Boulevard', 'Summit', 'Tundra', 'Wetlands', 'Workshop', 'Kitchen',
+    'Rooftops', 'Mine', 'Marsh', 'Orchard', 'Pier', 'Junction', 'Ridge', 'Gardens', 'Skyway'
+  ];
+  const venue = [
+    'Circuit', 'Speedway', 'Raceway', 'Run', 'Rally', 'Grand Prix', 'Loop', 'Cup', 'Gauntlet',
+    'Derby', 'Dash', 'Sprint', 'Ring', 'Classic', 'Challenge', 'Scramble', 'Express', 'Showdown'
+  ];
+  const cups = ['Shell Cup', 'Leaf Cup', 'Star Cup', 'Flower Cup', 'Lightning Cup', 'Special Cup', 'Bolt Cup', 'Sprocket Cup'];
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+  function randomTitle() {
+    const r = Math.random();
+    if (r < 0.45) return `${pick(flavour)} ${pick(place)} ${pick(venue)}`;
+    if (r < 0.7) return `${pick(flavour)} ${pick(place)}`;
+    if (r < 0.85) return `${pick(place).replace(/s$/, '')} of ${pick(flavour)} ${pick(venue)}`;
+    return `${pick(flavour)} ${pick(venue)} — ${pick(cups)}`;
+  }
+  root.TinyTMTNames = { randomTitle };
+})(window);
+
+</script>
+  <script>
+/*
+ * TinyTMT geometry. Units: millimetres. World axes: +x right, +y down (screen).
+ * Heading `a` in degrees: 0 = +x, positive = clockwise on screen.
+ * A placed piece stores its ENTRY pose {x, y, a} and entry elevation z.
+ */
+(function (root) {
+  const D2R = Math.PI / 180;
+  const norm = (a) => ((a % 360) + 360) % 360;
+  const angDiff = (a, b) => { const d = norm(a - b); return d > 180 ? 360 - d : d; };
+  const rot = (x, y, a) => { const r = a * D2R, c = Math.cos(r), s = Math.sin(r); return { x: x * c - y * s, y: x * s + y * c }; };
+  const compose = (pose, local) => { const p = rot(local.x, local.y, pose.a); return { x: pose.x + p.x, y: pose.y + p.y, a: norm(pose.a + local.a) }; };
+  /** Pose of a piece whose local transform `local` must land on world pose `target`. */
+  const solveEntry = (target, local) => { const a = norm(target.a - local.a); const p = rot(local.x, local.y, a); return { x: target.x - p.x, y: target.y - p.y, a }; };
+  const toLocal = (pose, wx, wy) => rot(wx - pose.x, wy - pose.y, -pose.a);
+
+  /** Overall track width for a width mode, from settings. Double = 2 lanes, no separator. */
+  function trackWidth(settings, widthMode) {
+    const lanes = widthMode === 'double' ? 2 : 1;
+    return lanes * settings.laneWidth + 2 * settings.wallThickness;
+  }
+
+  function centerRadius(part, W) { return part.ir + W / 2; }
+
+  /** Exit transform in the piece's local frame. */
+  function exitLocal(part, dir, W) {
+    if (part.type === 'straight') return { x: part.length, y: 0, a: 0 };
+    const R = centerRadius(part, W), t = part.angle * D2R;
+    const x = R * Math.sin(t), y = R - R * Math.cos(t);
+    return dir === 'L' ? { x, y: -y, a: -part.angle } : { x, y, a: part.angle };
+  }
+
+  /** Centre-line length (what a car travels). Ramps use their sloped bed length. */
+  function pieceLength(part, W) {
+    if (part.type === 'straight') return part.bedLength || part.length;
+    return centerRadius(part, W) * part.angle * D2R;
+  }
+
+  /** Outline as a polygon in local coords (arcs tessellated). */
+  function outlineLocal(part, dir, W) {
+    const h = W / 2;
+    if (part.type === 'straight') return [{ x: 0, y: -h }, { x: part.length, y: -h }, { x: part.length, y: h }, { x: 0, y: h }];
+    const R = centerRadius(part, W), ri = R - h, ro = R + h;
+    const sgn = dir === 'L' ? -1 : 1;
+    const steps = part.style === 'digital' ? Math.max(2, Math.round(part.angle / 7.5)) : Math.max(6, Math.ceil(part.angle / 3));
+    const pts = [];
+    const at = (r, t) => ({ x: r * Math.sin(t), y: sgn * (R - r * Math.cos(t)) });
+    for (let i = 0; i <= steps; i++) pts.push(at(ro, (part.angle * D2R * i) / steps));
+    for (let i = steps; i >= 0; i--) pts.push(at(ri, (part.angle * D2R * i) / steps));
+    return pts;
+  }
+
+  /** Points along an offset of the centre line (offset>0 = right side). */
+  function railLocal(part, dir, W, offset, stepMm) {
+    stepMm = stepMm || 10;
+    if (part.type === 'straight') {
+      const n = Math.max(1, Math.ceil(part.length / stepMm)), pts = [];
+      for (let i = 0; i <= n; i++) pts.push({ x: (part.length * i) / n, y: offset, t: i / n });
+      return pts;
+    }
+    const R = centerRadius(part, W), sgn = dir === 'L' ? -1 : 1;
+    const r = R - sgn * offset; // right-turn: right side is inside
+    const arc = r * part.angle * D2R;
+    const n = part.style === 'digital' ? Math.max(2, Math.round(part.angle / 7.5)) : Math.max(2, Math.ceil(arc / stepMm));
+    const pts = [];
+    for (let i = 0; i <= n; i++) { const t = (part.angle * D2R * i) / n; pts.push({ x: r * Math.sin(t), y: sgn * (R - r * Math.cos(t)), t: i / n }); }
+    return pts;
+  }
+
+  function hitLocal(part, dir, W, lx, ly) {
+    const h = W / 2;
+    if (part.type === 'straight') return lx >= 0 && lx <= part.length && Math.abs(ly) <= h;
+    const R = centerRadius(part, W), sgn = dir === 'L' ? -1 : 1;
+    const cy = sgn * R; // centre of curvature
+    const dx = lx, dy = ly - cy, d = Math.hypot(dx, dy);
+    if (d < R - h || d > R + h) return false;
+    // angle swept from start vector (0,-sgn)
+    let t = Math.atan2(dx, -sgn * dy); // 0 at start, increasing along travel
+    return t >= -1e-6 && t <= part.angle * D2R + 1e-6;
+  }
+
+  function pointInPoly(pts, x, y) {
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const a = pts[i], b = pts[j];
+      if ((a.y > y) !== (b.y > y) && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+    }
+    return inside;
+  }
+
+  root.TinyTMTGeom = { D2R, norm, angDiff, rot, compose, solveEntry, toLocal, trackWidth, centerRadius, exitLocal, pieceLength, outlineLocal, railLocal, hitLocal, pointInPoly };
+})(window);
+
+</script>
+  <script>
+/* Blueprint-style PNG renderer (also used for library thumbnails). */
+(function (root) {
+  const BG = '#0f4c81', INK = '#ffffff', FAINT = 'rgba(255,255,255,0.10)', MID = 'rgba(255,255,255,0.28)';
+  const MONO = 'ui-monospace, "SFMono-Regular", Menlo, Consolas, "Courier New", monospace';
+
+  function bounds(derived) {
+    const ws = derived.workspace;
+    let x0 = ws.x0, y0 = ws.y0, x1 = ws.x1, y1 = ws.y1;
+    derived.pieces.forEach((d) => d.outline.forEach((q) => { x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }));
+    return { x0, y0, x1, y1 };
+  }
+
+  function poly(ctx, pts) { ctx.beginPath(); pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y))); }
+
+  function drawTrack(ctx, derived, s, mini) {
+    [...derived.pieces].sort((a, b) => Math.max(a.z0, a.z1) - Math.max(b.z0, b.z1)).forEach((d) => {
+      poly(ctx, d.outline); ctx.closePath();
+      ctx.fillStyle = d.z0 > 0.5 || d.z1 > 0.5 ? 'rgba(255,214,120,0.22)' : 'rgba(255,255,255,0.10)';
+      ctx.fill();
+      ctx.lineWidth = Math.max(1, (mini ? 0.6 : 1.2) / s * (mini ? 1 : 1)); ctx.strokeStyle = MID; ctx.stroke();
+      ctx.strokeStyle = INK; ctx.lineWidth = Math.max(d.wallT, (mini ? 1 : 2) / s);
+      [d.railL, d.railR].forEach((r) => { poly(ctx, r); ctx.stroke(); });
+      if (!mini) {
+        ctx.setLineDash([6 / s, 6 / s]); ctx.lineWidth = 1 / s; ctx.strokeStyle = MID; poly(ctx, d.center); ctx.stroke(); ctx.setLineDash([]);
+        if (d.part.rise) { // chevrons uphill
+          const m = d.center[Math.floor(d.center.length * 0.22)], up = d.part.rise > 0 ? 1 : -1;
+          const a = d.headingMid * Math.PI / 180, L = d.W * 0.22;
+          ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(a); ctx.strokeStyle = '#ffd678'; ctx.lineWidth = 2 / s;
+          for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo((k * L * 0.8) - up * L * 0.4, -L); ctx.lineTo(k * L * 0.8 + up * L * 0.4, 0); ctx.lineTo((k * L * 0.8) - up * L * 0.4, L); ctx.stroke(); }
+          ctx.restore();
+        }
+      }
+    });
+    if (!mini) {
+      // labels
+      ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      derived.pieces.forEach((d) => {
+        const m = d.center[Math.floor(d.center.length / 2)];
+        ctx.save(); ctx.translate(m.x, m.y); ctx.scale(1 / s, 1 / s);
+        ctx.font = `600 11px ${MONO}`; ctx.fillText(d.shortLabel, 0, 0);
+        if (d.z1 > 0.5 || d.z0 > 0.5) { ctx.font = `10px ${MONO}`; ctx.fillStyle = '#ffd678'; ctx.fillText(`z${Math.round(d.z0)}→${Math.round(d.z1)}`, 0, 13); ctx.fillStyle = INK; }
+        ctx.restore();
+      });
+      // open ends
+      derived.openConnectors.forEach((c) => { ctx.beginPath(); ctx.arc(c.x, c.y, 6 / s, 0, Math.PI * 2); ctx.fillStyle = '#ffd678'; ctx.fill(); });
+    }
+  }
+
+  function render(derived, design, settings, opts) {
+    opts = opts || {};
+    const mini = !!opts.mini;
+    const ws = derived.workspace;
+    const b = bounds(derived);
+    const pad = mini ? 60 : 180; // mm
+    const bx0 = b.x0 - pad, by0 = b.y0 - pad, bw = b.x1 - b.x0 + 2 * pad, bh = b.y1 - b.y0 + 2 * pad;
+    const maxW = mini ? (opts.width || 320) : 2400, maxH = mini ? (opts.width || 320) * 0.75 : 1800;
+    const s = Math.min(maxW / bw, maxH / bh);
+    const drawW = Math.round(bw * s), drawH = Math.round(bh * s);
+    const sideW = mini ? 0 : 720, headH = mini ? 0 : 0;
+    const bomRows = derived.bom.rows;
+    const sideNeeded = 470 + bomRows.length * 26 + 120;
+    const W = drawW + sideW, H = Math.max(drawH, mini ? 0 : sideNeeded) + headH;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+
+    // world transform
+    ctx.save();
+    ctx.translate(0, headH + (H - headH - drawH) / 2);
+    ctx.scale(s, s); ctx.translate(-bx0, -by0);
+    // grid
+    const g = settings.gridSize, major = g * settings.majorEvery;
+    if (!mini) {
+      ctx.lineWidth = 1 / s;
+      for (let x = Math.floor(bx0 / g) * g; x <= bx0 + bw; x += g) { ctx.strokeStyle = Math.abs(x % major) < 1e-6 ? MID : FAINT; ctx.beginPath(); ctx.moveTo(x, by0); ctx.lineTo(x, by0 + bh); ctx.stroke(); }
+      for (let y = Math.floor(by0 / g) * g; y <= by0 + bh; y += g) { ctx.strokeStyle = Math.abs(y % major) < 1e-6 ? MID : FAINT; ctx.beginPath(); ctx.moveTo(bx0, y); ctx.lineTo(bx0 + bw, y); ctx.stroke(); }
+    }
+    // workspace
+    ctx.strokeStyle = INK; ctx.lineWidth = (mini ? 1 : 2.5) / s; ctx.setLineDash([12 / s, 6 / s]);
+    ctx.strokeRect(ws.x0, ws.y0, ws.x1 - ws.x0, ws.y1 - ws.y0); ctx.setLineDash([]);
+    if (!mini) {
+      // dimension lines
+      ctx.lineWidth = 1.2 / s; ctx.strokeStyle = INK; ctx.fillStyle = INK;
+      const off = 70;
+      const dim = (x0, y0, x1, y1, label, vertical) => {
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        const tick = 12;
+        [[x0, y0], [x1, y1]].forEach(([x, y]) => { ctx.beginPath(); if (vertical) { ctx.moveTo(x - tick, y); ctx.lineTo(x + tick, y); } else { ctx.moveTo(x, y - tick); ctx.lineTo(x, y + tick); } ctx.stroke(); });
+        ctx.save(); ctx.translate((x0 + x1) / 2, (y0 + y1) / 2); if (vertical) ctx.rotate(-Math.PI / 2);
+        ctx.scale(1 / s, 1 / s); ctx.font = `600 14px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText(label, 0, -4); ctx.restore();
+      };
+      dim(ws.x0, ws.y0 - off, ws.x1, ws.y0 - off, `${Math.round(ws.x1 - ws.x0)} mm`, false);
+      dim(ws.x0 - off, ws.y0, ws.x0 - off, ws.y1, `${Math.round(ws.y1 - ws.y0)} mm`, true);
+    }
+    drawTrack(ctx, derived, s, mini);
+    ctx.restore();
+
+    if (!mini) drawSide(ctx, drawW, 0, sideW, H, derived, design, settings, s);
+    return cv;
+  }
+
+  function drawSide(ctx, x, y, w, h, derived, design, settings, s) {
+    ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(x + 20, y + 20, w - 40, h - 40);
+    let cy = y + 60; const lx = x + 44, rx = x + w - 44;
+    ctx.fillStyle = INK; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    ctx.font = `700 13px ${MONO}`; ctx.globalAlpha = 0.7; ctx.fillText('TINYTMT TRACK DESIGNER · SALVAGEGARDEN MAKERSPACE', lx, cy); ctx.globalAlpha = 1;
+    cy += 44; ctx.font = `700 30px ${MONO}`;
+    wrap(ctx, design.title.toUpperCase(), lx, cy, w - 88, 36).forEach((line, i) => ctx.fillText(line, lx, cy + i * 36));
+    cy += 36 * wrap(ctx, design.title.toUpperCase(), lx, cy, w - 88, 36).length + 10;
+    hr(ctx, lx, rx, cy); cy += 30;
+    const st = derived.stats;
+    const kv = [
+      ['TRACK LENGTH', `${(st.length / 1000).toFixed(2)} m`],
+      ['PIECES', `${st.pieces} track + ${st.supports} supports`],
+      ['EST. PRINT TIME', fmtTime(st.minutes)],
+      ['EST. PETG', `${Math.round(st.grams)} g  (${st.filamentM.toFixed(0)} m Ø${settings.filamentDiameter})`],
+      ['WORKSPACE', `${settings.workspaceW} × ${settings.workspaceH} mm`],
+      ['LAYOUT', `${st.openEnds === 0 && st.pieces ? 'closed loop' : st.openEnds + ' open ends'}${st.collisions ? ' · ' + st.collisions + ' overlaps' : ''}`],
+      ['DATE', new Date().toISOString().slice(0, 10)]
+    ];
+    ctx.font = `14px ${MONO}`;
+    kv.forEach(([k, v]) => { ctx.globalAlpha = 0.65; ctx.fillText(k, lx, cy); ctx.globalAlpha = 1; ctx.textAlign = 'right'; ctx.fillText(v, rx, cy); ctx.textAlign = 'left'; cy += 26; });
+    cy += 6; hr(ctx, lx, rx, cy); cy += 32;
+    ctx.font = `700 16px ${MONO}`; ctx.fillText('BILL OF MATERIALS — 3D PRINTED PARTS', lx, cy); cy += 28;
+    ctx.font = `12px ${MONO}`; ctx.globalAlpha = 0.65;
+    ctx.fillText('QTY', lx, cy); ctx.fillText('PART', lx + 56, cy); ctx.textAlign = 'right'; ctx.fillText('g EACH', rx - 120, cy); ctx.fillText('g TOTAL', rx, cy); ctx.textAlign = 'left'; ctx.globalAlpha = 1; cy += 8;
+    hr(ctx, lx, rx, cy, 0.4); cy += 20;
+    ctx.font = `14px ${MONO}`;
+    derived.bom.rows.forEach((r) => {
+      ctx.fillText(String(r.qty).padStart(3, ' '), lx, cy);
+      let name = r.name + (r.width === 'double' ? ' [DBL]' : '');
+      while (ctx.measureText(name).width > w - 88 - 56 - 200 && name.length > 4) name = name.slice(0, -2) + '…';
+      ctx.fillText(name, lx + 56, cy);
+      ctx.textAlign = 'right'; ctx.fillText(String(Math.round(r.gramsEach)), rx - 120, cy); ctx.fillText(String(Math.round(r.gramsTotal)), rx, cy); ctx.textAlign = 'left';
+      cy += 26;
+    });
+    if (!derived.bom.rows.length) { ctx.globalAlpha = 0.6; ctx.fillText('(no parts yet)', lx, cy); ctx.globalAlpha = 1; cy += 26; }
+    // scale bar
+    const by = y + h - 70; const len = 500 * s;
+    ctx.fillStyle = INK; ctx.font = `12px ${MONO}`;
+    for (let i = 0; i < 5; i++) { ctx.globalAlpha = i % 2 ? 0.35 : 1; ctx.fillRect(lx + (len / 5) * i, by, len / 5, 8); }
+    ctx.globalAlpha = 1; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(lx, by, len, 8);
+    ctx.fillText('0', lx - 3, by + 26); ctx.fillText('500 mm', lx + len - 24, by + 26);
+    ctx.globalAlpha = 0.6; ctx.fillText('Estimates only — verify in your slicer.', lx, by - 16); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+
+  function hr(ctx, x0, x1, y, a) { ctx.save(); ctx.globalAlpha = a || 0.8; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.lineWidth = 1; ctx.strokeStyle = INK; ctx.stroke(); ctx.restore(); }
+  function wrap(ctx, text, x, y, maxW) {
+    const words = text.split(' '), lines = []; let cur = '';
+    words.forEach((wd) => { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = t; });
+    if (cur) lines.push(cur); return lines.slice(0, 3);
+  }
+  function fmtTime(min) { const h = Math.floor(min / 60), m = Math.round(min % 60); return h ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`; }
+
+  root.TinyTMTBlueprint = { render, fmtTime };
+})(window);
+
+</script>
+  <script>
+/* Built-in sample tracks (also in /examples as .tinytmt.json). */
+window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d7166030","title":"Rubber Duck Lagoon Loop","created":"2026-11-17T05:41:28.084774+00:00","modified":"2026-11-17T05:41:28.084774+00:00","pieces":[{"id":"f0eeb9afb9","part":"S250","x":750,"y":500,"a":0,"z":0,"dir":"R","width":"single"},{"id":"87df71086e","part":"S250","x":1000.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"5f3e0e4d27","part":"C45-R200","x":1250.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"eccdb72ad8","part":"C45-R200","x":1434.201,"y":576.299,"a":45,"z":0,"dir":"R","width":"single"},{"id":"87d8157dbc","part":"C45-R200","x":1510.5,"y":760.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"f52028f368","part":"C45-R200","x":1434.201,"y":944.701,"a":135,"z":0,"dir":"R","width":"single"},{"id":"047d8f17f5","part":"S250","x":1250.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"160a5013da","part":"S250","x":1000.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"cca442cc6d","part":"C45-R200","x":750.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"bce721fb00","part":"C45-R200","x":565.799,"y":944.701,"a":225,"z":0,"dir":"R","width":"single"},{"id":"33243ec080","part":"C45-R200","x":489.5,"y":760.5,"a":270,"z":0,"dir":"R","width":"single"},{"id":"01f4d5a0e1","part":"C45-R200","x":565.799,"y":576.299,"a":315,"z":0,"dir":"R","width":"single"}],"blurb":"Beginner oval \u2014 learn to steer, 2 straights each side."},{"format":"tinytmt-design","version":1,"id":"124be4144323","title":"Sprocket Slalom Speedway","created":"2026-11-17T05:41:28.084876+00:00","modified":"2026-11-17T05:41:28.084876+00:00","pieces":[{"id":"dbb7fe1a5b","part":"S150","x":550,"y":500,"a":0,"z":0,"dir":"R","width":"single"},{"id":"0ae3212a27","part":"C30-R250","x":700.0,"y":500.0,"a":0,"z":0,"dir":"L","width":"single"},{"id":"05d536e0b2","part":"C30-R250","x":855.25,"y":458.401,"a":330,"z":0,"dir":"R","width":"single"},{"id":"1611b48983","part":"C30-R250","x":1010.5,"y":416.802,"a":0,"z":0,"dir":"R","width":"single"},{"id":"e46dcf8dfd","part":"C30-R250","x":1165.75,"y":458.401,"a":30,"z":0,"dir":"L","width":"single"},{"id":"6bdb913ec7","part":"S150","x":1321.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"c1e61486c4","part":"C90-R200","x":1471.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"bd15b3154b","part":"C90-R200","x":1731.5,"y":760.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"03a1f806bf","part":"S150","x":1471.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"d480141eff","part":"C30-R250","x":1321.0,"y":1021.0,"a":180,"z":0,"dir":"L","width":"single"},{"id":"582ee96a44","part":"C30-R250","x":1165.75,"y":1062.599,"a":150,"z":0,"dir":"R","width":"single"},{"id":"f539a7a6da","part":"C30-R250","x":1010.5,"y":1104.198,"a":180,"z":0,"dir":"R","width":"single"},{"id":"aea1294623","part":"C30-R250","x":855.25,"y":1062.599,"a":210,"z":0,"dir":"L","width":"single"},{"id":"99fd5bf4cd","part":"S150","x":700.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"44d28e8da6","part":"C90-R200","x":550.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"d0a4bdab46","part":"C90-R200","x":289.5,"y":760.5,"a":270,"z":0,"dir":"R","width":"single"}],"blurb":"Swerves on both long sides \u2014 tests steering precision."},{"format":"tinytmt-design","version":1,"id":"4ab35e25ce7f","title":"Curb Cut Canyon Climb","created":"2026-11-17T05:41:28.084969+00:00","modified":"2026-11-17T05:41:28.084969+00:00","pieces":[{"id":"e20e19a052","part":"S150","x":500,"y":450,"a":0,"z":0,"dir":"R","width":"single"},{"id":"727ba1ad53","part":"RU250","x":650.0,"y":450.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"ec6ed2b3c7","part":"S250","x":896.0,"y":450.0,"a":0,"z":45,"dir":"R","width":"single"},{"id":"a7bd97a45c","part":"RD250","x":1146.0,"y":450.0,"a":0,"z":45,"dir":"R","width":"single"},{"id":"5db3b48e3c","part":"S150","x":1392.0,"y":450.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"ee4b6945fb","part":"C45-R250","x":1542.0,"y":450.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"92bfe2f3d8","part":"C45-R250","x":1761.557,"y":540.943,"a":45,"z":0,"dir":"R","width":"single"},{"id":"65c3ea3394","part":"C45-R250","x":1852.5,"y":760.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"9c97e43b0d","part":"C45-R250","x":1761.557,"y":980.057,"a":135,"z":0,"dir":"R","width":"single"},{"id":"0c454b3068","part":"S150","x":1542.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"f534a4d304","part":"L246","x":1392.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"9f8f41013a","part":"S250","x":1146.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"cdccd81bff","part":"L246","x":896.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"01e554e69a","part":"S150","x":650.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"7caba553dc","part":"C45-R250","x":500.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"7142fc221f","part":"C45-R250","x":280.443,"y":980.057,"a":225,"z":0,"dir":"R","width":"single"},{"id":"5f143f30bc","part":"C45-R250","x":189.5,"y":760.5,"a":270,"z":0,"dir":"R","width":"single"},{"id":"2683bfcc2e","part":"C45-R250","x":280.443,"y":540.943,"a":315,"z":0,"dir":"R","width":"single"}],"blurb":"Ramp up, cross a raised deck, ramp down \u2014 a curb-cut challenge."},{"format":"tinytmt-design","version":1,"id":"426b6f3cd96f","title":"Big Wheel Boulevard","created":"2026-11-17T05:41:28.085033+00:00","modified":"2026-11-17T05:41:28.085033+00:00","pieces":[{"id":"a0eb26c415","part":"C45-R200","x":550,"y":450,"a":0,"z":0,"dir":"R","width":"double"},{"id":"98251420b2","part":"C45-R200","x":774.86,"y":543.14,"a":45,"z":0,"dir":"L","width":"double"},{"id":"934a49ec5e","part":"C45-R200","x":999.72,"y":636.28,"a":0,"z":0,"dir":"L","width":"double"},{"id":"6512f07e69","part":"C45-R200","x":1224.58,"y":543.14,"a":315,"z":0,"dir":"R","width":"double"},{"id":"1f6cd64fa6","part":"C90-R200","x":1449.44,"y":450.0,"a":0,"z":0,"dir":"R","width":"double"},{"id":"e3cd87fffd","part":"C90-R200","x":1767.44,"y":768.0,"a":90,"z":0,"dir":"R","width":"double"},{"id":"b163b03464","part":"S400","x":1449.44,"y":1086.0,"a":180,"z":0,"dir":"R","width":"double"},{"id":"c0ad6e46dd","part":"S400","x":1049.44,"y":1086.0,"a":180,"z":0,"dir":"R","width":"double"},{"id":"609bca5a21","part":"S100","x":649.44,"y":1086.0,"a":180,"z":0,"dir":"R","width":"double"},{"id":"87c4e1a107","part":"C90-R200","x":549.44,"y":1086.0,"a":180,"z":0,"dir":"R","width":"double"},{"id":"823cdf7106","part":"C90-R200","x":231.44,"y":768.0,"a":270,"z":0,"dir":"R","width":"double"}],"blurb":"Double width \u2014 room for two chairs side by side, with a pinch."},{"format":"tinytmt-design","version":1,"id":"5hq101ime1sg","title":"Figure Eight Overpass Speedway","created":"2026-11-17T03:43:41.968Z","modified":"2026-11-17T03:43:43.039Z","pieces":[{"id":"1z90x9ude2dv","part":"RU250","dir":"R","width":"single","x":616.041,"y":366.5250000000001,"a":45,"z":0},{"id":"a8gr3ygye2e3","part":"RU150","dir":"R","width":"single","x":789.989,"y":540.4730000000002,"a":45,"z":45},{"id":"950w6dkne2ei","part":"S300","dir":"R","width":"single","x":893.9340000000001,"y":644.4180000000001,"a":45,"z":75},{"id":"c433lgrse2et","part":"RD150","dir":"R","width":"single","x":1106.066,"y":856.5500000000002,"a":45,"z":75},{"id":"352xrmswe2f0","part":"RD250","dir":"R","width":"single","x":1210.011,"y":960.4950000000001,"a":45,"z":45},{"id":"mkqukzzre2fg","part":"C45-R200","dir":"L","width":"single","x":1383.9589999999998,"y":1134.443,"a":45,"z":0},{"id":"tl76uy96e2fn","part":"C45-R200","dir":"L","width":"single","x":1568.1599999999999,"y":1210.7420000000002,"a":0,"z":0},{"id":"3fbvm5i3e2ft","part":"C45-R200","dir":"L","width":"single","x":1752.3609999999999,"y":1134.443,"a":315,"z":0},{"id":"i1b9kvv9e2g6","part":"S400","dir":"L","width":"single","x":1828.6599999999999,"y":950.2420000000002,"a":270,"z":0},{"id":"ht54ys67e2ge","part":"C45-R200","dir":"L","width":"single","x":1828.6599999999999,"y":550.2420000000002,"a":270,"z":0},{"id":"9pdt352he2gm","part":"C45-R200","dir":"L","width":"single","x":1752.3609999999999,"y":366.04100000000017,"a":225,"z":0},{"id":"tmlykgh8e2gt","part":"C45-R200","dir":"L","width":"single","x":1568.1599999999999,"y":289.7420000000002,"a":180,"z":0},{"id":"95uvyh1te2h8","part":"L246","dir":"L","width":"single","x":1383.9589999999998,"y":366.04100000000017,"a":135,"z":0},{"id":"xtdl6irne2hm","part":"L147","dir":"L","width":"single","x":1210.011,"y":539.989,"a":135,"z":0},{"id":"99pa3v1te2hu","part":"S300","dir":"L","width":"single","x":1106.066,"y":643.9340000000002,"a":135,"z":0},{"id":"jiwo3egbe2ig","part":"L147","dir":"L","width":"single","x":893.9340000000001,"y":856.066,"a":135,"z":0},{"id":"gw7lidjee2iq","part":"L246","dir":"L","width":"single","x":789.989,"y":960.0110000000002,"a":135,"z":0},{"id":"c1pfkaaoe2jm","part":"C45-R200","dir":"R","width":"single","x":616.041,"y":1133.959,"a":135,"z":0},{"id":"t7aiix7je2jv","part":"C45-R200","dir":"R","width":"single","x":431.84000000000003,"y":1210.258,"a":180,"z":0},{"id":"bjmvgf8ae2k4","part":"C45-R200","dir":"R","width":"single","x":247.63900000000007,"y":1133.959,"a":225,"z":0},{"id":"o2ud5biae2l0","part":"S400","dir":"R","width":"single","x":171.34000000000006,"y":949.758,"a":270,"z":0},{"id":"dzqpa8r6e2lq","part":"C45-R200","dir":"R","width":"single","x":171.34000000000006,"y":549.758,"a":270,"z":0},{"id":"kncguf8de2lv","part":"C45-R200","dir":"R","width":"single","x":247.63900000000007,"y":365.557,"a":315,"z":0},{"id":"qlwtdt0je2m7","part":"C45-R200","dir":"R","width":"single","x":431.84000000000003,"y":289.25800000000004,"a":0,"z":0}],"blurb":"Over/under figure eight using the ramp set and lower-level straights."}];
+
+</script>
+  <script>
+/*
+ * TinyTMT add-on registry.
+ *
+ * An add-on is a plain script loaded after app.js that calls:
+ *
+ *   TinyTMT.addons.register({
+ *     id: 'view3d',
+ *     label: 'View in 3D',
+ *     icon: '🧊',                 // optional
+ *     badge: 'Soon',              // optional pill on the toolbar button
+ *     run(api) { ... }            // called when the button is clicked
+ *     init(api) { ... }           // optional, called once on registration
+ *   });
+ *
+ * `api` (also available as TinyTMT.api) exposes read-only helpers:
+ *   api.getDesign()    → deep copy of the current design JSON
+ *   api.getDerived()   → computed geometry: pieces with world outlines, connectors, stats, BoM
+ *   api.getParts()     → the active parts catalogue
+ *   api.getSettings()  → current settings
+ *   api.geom           → geometry helpers (TinyTMTGeom)
+ *   api.on('change', fn) → subscribe to design changes; returns an unsubscribe fn
+ *   api.modal({title, html, buttons}) / api.toast(msg)
+ */
+(function (root) {
+  const list = [];
+  const listeners = {};
+  const TinyTMT = root.TinyTMT || (root.TinyTMT = {});
+  TinyTMT.version = '1.0.0';
+  TinyTMT._emit = (ev, data) => (listeners[ev] || []).forEach((fn) => { try { fn(data); } catch (e) { console.error('[TinyTMT add-on]', e); } });
+  TinyTMT._on = (ev, fn) => { (listeners[ev] = listeners[ev] || []).push(fn); return () => { listeners[ev] = listeners[ev].filter((f) => f !== fn); }; };
+  TinyTMT.addons = {
+    list,
+    register(addon) {
+      if (!addon || !addon.id || typeof addon.run !== 'function') throw new Error('Add-on needs an id and a run(api) function');
+      if (list.some((a) => a.id === addon.id)) return;
+      list.push(addon);
+      TinyTMT._emit('addon-registered', addon);
+      if (TinyTMT.api && typeof addon.init === 'function') addon.init(TinyTMT.api);
+    }
+  };
+})(window);
+
+</script>
+  <script>
+/*
+ * TinyTMT track designer by SalvageGarden Makerspace
+ * Single-page, dependency-free, offline-capable track layout editor.
+ * License: MIT (see LICENSE)
+ */
+(function () {
+  'use strict';
+  const G = window.TinyTMTGeom, P = window.TinyTMTParts, BP = window.TinyTMTBlueprint, NAMES = window.TinyTMTNames;
+  const TinyTMT = window.TinyTMT;
+  const $ = (s, el) => (el || document).querySelector(s);
+  const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+
+  /* ---------- storage (wrapped: storage can be unavailable) ---------- */
+  const LS = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  };
+  const KEYS = { settings: 'tinytmt.settings.v1', current: 'tinytmt.current.v1', library: 'tinytmt.library.v1', ui: 'tinytmt.ui.v1' };
+
+  const DEFAULT_SETTINGS = {
+    workspaceW: 2000, workspaceH: 1500, overflowPct: 50,
+    gridSize: 50, majorEvery: 10, snapToGrid: true, snapPx: 28, rotationStep: 45, wheel: 'zoom',
+    showLabels: true, showCenterline: true,
+    laneWidth: 115, wallThickness: 3, wallHeight: 50, floorThickness: 2.5,
+    defaultWidth: 'single', defaultStraight: P.DEFAULT_STRAIGHT, defaultCurve: P.DEFAULT_CURVE, clearance: 55,
+    density: 1.27, filamentDiameter: 1.75, solidity: 0.7, jointVolume: 4, gramsPerHour: 18, overheadMin: 6,
+    supportBaseG: 12, supportGPerMm: 0.35, clipsPerJoint: 0, clipGrams: 2, costPerKg: 0, currency: '$',
+    partOverrides: {}, customParts: []
+  };
+
+  /* ---------- state ---------- */
+  let settings = Object.assign(clone(DEFAULT_SETTINGS), LS.get(KEYS.settings, {}));
+  let parts = [], partMap = {};
+  let design = null;
+  let derived = null;
+  const ui = Object.assign({ activePart: settings.defaultStraight, width: settings.defaultWidth, dir: 'R', rotation: 0, tool: 'place' }, LS.get(KEYS.ui, {}));
+  let selection = new Set();
+  let activeEnd = null; // {pid, end}
+  let ghost = null;
+  let hoverPid = null;
+  let undoStack = [], redoStack = [];
+  let dirty = false;
+  const view = { s: 0.3, ox: 0, oy: 0, fit: 0.3 };
+  let pointerWorld = null, pointerOnCanvas = false, spaceDown = false;
+  let drag = null;
+  let paletteDrag = null;
+
+  const canvas = $('#canvas'), ctx = canvas.getContext('2d');
+
+  /* ---------- parts ---------- */
+  function buildParts() {
+    const ov = settings.partOverrides || {};
+    parts = P.DEFAULT_PARTS.map((p) => Object.assign({}, p, ov[p.id] || {}));
+    (settings.customParts || []).forEach((c) => parts.push(Object.assign({ source: 'custom', group: c.type === 'curve' ? 'curve' : 'straight' }, c, ov[c.id] || {})));
+    partMap = {};
+    parts.forEach((p) => { partMap[p.id] = p; });
+    if (!partMap[ui.activePart]) ui.activePart = settings.defaultStraight in partMap ? settings.defaultStraight : parts[0].id;
+  }
+  const visibleParts = () => parts.filter((p) => !p.hidden);
+  const W = (width) => G.trackWidth(settings, width);
+
+  /* ---------- design ---------- */
+  function newDesign() {
+    const t = new Date().toISOString();
+    return { format: 'tinytmt-design', version: 1, id: uid(), title: NAMES.randomTitle(), created: t, modified: t, pieces: [] };
+  }
+
+  /* ---------- geometry per piece ---------- */
+  function pieceGeom(p) {
+    const part = partMap[p.part] || { id: p.part, name: 'Unknown ' + p.part, type: 'straight', length: 100, group: 'straight' };
+    const w = W(p.width);
+    const pose = { x: p.x, y: p.y, a: p.a };
+    const exL = G.exitLocal(part, p.dir, w);
+    const ex = G.compose(pose, exL);
+    const rise = part.rise || 0, z0 = p.z || 0, z1 = z0 + rise;
+    const tf = (q) => { const r = G.rot(q.x, q.y, p.a); return { x: p.x + r.x, y: p.y + r.y, t: q.t }; };
+    const off = w / 2 - settings.wallThickness / 2;
+    const d = {
+      p, part, W: w, wallT: settings.wallThickness, z0, z1,
+      outline: G.outlineLocal(part, p.dir, w).map(tf),
+      railL: G.railLocal(part, p.dir, w, -off).map(tf),
+      railR: G.railLocal(part, p.dir, w, off).map(tf),
+      center: G.railLocal(part, p.dir, w, 0, 10).map(tf),
+      length: G.pieceLength(part, w),
+      headingMid: G.norm(p.a + (part.type === 'curve' ? (p.dir === 'L' ? -1 : 1) * part.angle / 2 : 0))
+    };
+    d.samples = [];
+    [-(w / 2 - 1.5), 0, w / 2 - 1.5].forEach((o) => G.railLocal(part, p.dir, w, o, 8).forEach((q) => { const r = tf(q); d.samples.push({ x: r.x, y: r.y, z: z0 + rise * q.t }); }));
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    d.outline.forEach((q) => { x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); });
+    d.bbox = { x0, y0, x1, y1 };
+    d.conns = [
+      { pid: p.id, end: 0, x: p.x, y: p.y, out: G.norm(p.a + 180), z: z0, width: p.width },
+      { pid: p.id, end: 1, x: ex.x, y: ex.y, out: ex.a, z: z1, width: p.width }
+    ];
+    d.shortLabel = shortLabel(part, p);
+    return d;
+  }
+  function shortLabel(part, p) {
+    if (part.rise) return (part.rise > 0 ? '▲' : '▼') + (part.bedLength || part.length);
+    if (part.type === 'straight') return (part.id.startsWith('L') ? 'L' : 'S') + part.length;
+    return `${part.angle}°${p.dir === 'L' ? '↰' : '↱'}${part.ir}${part.style === 'digital' ? 'D' : ''}`;
+  }
+  /** Returns position fraction (0..1) along piece if world point is inside (shrunk) footprint, else -1. */
+  function localHit(d, wx, wy, shrink) {
+    const part = d.part, l = G.toLocal({ x: d.p.x, y: d.p.y, a: d.p.a }, wx, wy), h = d.W / 2 - (shrink || 0), e = shrink ? 0.75 : 0;
+    if (part.type === 'straight') return l.x > e && l.x < part.length - e && Math.abs(l.y) <= h ? l.x / part.length : -1;
+    const R = G.centerRadius(part, d.W), sgn = d.p.dir === 'L' ? -1 : 1;
+    const dy = l.y - sgn * R, dist = Math.hypot(l.x, dy);
+    if (dist < R - h || dist > R + h) return -1;
+    const t = Math.atan2(l.x, -sgn * dy), T = part.angle * G.D2R, et = e / R;
+    return t > et - 1e-9 && t < T - et + 1e-9 ? t / T : -1;
+  }
+  function overlaps(a, b) {
+    const pad = 2;
+    if (a.bbox.x1 < b.bbox.x0 - pad || b.bbox.x1 < a.bbox.x0 - pad || a.bbox.y1 < b.bbox.y0 - pad || b.bbox.y1 < a.bbox.y0 - pad) return false;
+    const zr = (d) => [Math.min(d.z0, d.z1), Math.max(d.z0, d.z1)];
+    const [a0, a1] = zr(a), [b0, b1] = zr(b);
+    if (a0 - b1 >= settings.clearance || b0 - a1 >= settings.clearance) return false;
+    const test = (A, B) => A.samples.some((q) => { const f = localHit(B, q.x, q.y, 1); if (f < 0) return false; const zb = B.z0 + (B.z1 - B.z0) * f; return Math.abs(q.z - zb) < settings.clearance; });
+    return test(a, b) || test(b, a);
+  }
+
+  /* ---------- derive everything from design ---------- */
+  function overflowRect() {
+    const mx = settings.workspaceW * settings.overflowPct / 200, my = settings.workspaceH * settings.overflowPct / 200;
+    return { x0: -mx, y0: -my, x1: settings.workspaceW + mx, y1: settings.workspaceH + my };
+  }
+  function derive() {
+    const out = { pieces: [], byId: {}, connectors: [], joints: [], openConnectors: [], partner: {}, collisions: new Set(), outside: new Set(), oob: new Set(), mismatch: [], zMin: 0, zMax: 0 };
+    out.workspace = { x0: 0, y0: 0, x1: settings.workspaceW, y1: settings.workspaceH };
+    out.overflow = overflowRect();
+    design.pieces.forEach((p) => { const d = pieceGeom(p); out.pieces.push(d); out.byId[p.id] = d; out.connectors.push(...d.conns); out.zMin = Math.min(out.zMin, d.z0, d.z1); out.zMax = Math.max(out.zMax, d.z0, d.z1); });
+    const cs = out.connectors;
+    for (let i = 0; i < cs.length; i++) {
+      const a = cs[i];
+      if (out.partner[a.pid + ':' + a.end]) continue;
+      for (let j = i + 1; j < cs.length; j++) {
+        const b = cs[j];
+        if (b.pid === a.pid || out.partner[b.pid + ':' + b.end]) continue;
+        if (Math.abs(a.x - b.x) < 1.5 && Math.abs(a.y - b.y) < 1.5 && G.angDiff(a.out, b.out + 180) < 2 && Math.abs(a.z - b.z) < 3) {
+          out.partner[a.pid + ':' + a.end] = b; out.partner[b.pid + ':' + b.end] = a; out.joints.push([a, b]);
+          if (a.width !== b.width) out.mismatch.push(a);
+          break;
+        }
+      }
+    }
+    out.openConnectors = cs.filter((c) => !out.partner[c.pid + ':' + c.end]);
+    const joined = (a, b) => [0, 1].some((e) => { const q = out.partner[a + ':' + e]; return q && q.pid === b; });
+    for (let i = 0; i < out.pieces.length; i++) for (let j = i + 1; j < out.pieces.length; j++) {
+      const A = out.pieces[i], B = out.pieces[j];
+      if (joined(A.p.id, B.p.id)) continue;
+      if (overlaps(A, B)) { out.collisions.add(A.p.id); out.collisions.add(B.p.id); }
+    }
+    const ws = out.workspace, ov = out.overflow, inside = (r, q) => q.x >= r.x0 - 0.5 && q.x <= r.x1 + 0.5 && q.y >= r.y0 - 0.5 && q.y <= r.y1 + 0.5;
+    out.pieces.forEach((d) => {
+      if (!d.outline.every((q) => inside(ws, q))) out.outside.add(d.p.id);
+      if (!d.outline.every((q) => inside(ov, q))) out.oob.add(d.p.id);
+    });
+    out.below = out.pieces.filter((d) => d.z0 < -0.5 || d.z1 < -0.5).map((d) => d.p.id);
+    out.bom = computeBom(out);
+    out.stats = computeStats(out);
+    return out;
+  }
+
+  /* ---------- estimates ---------- */
+  function rawEstimate(part, width) {
+    const w = W(width), s = settings;
+    let area, wallLen;
+    if (part.type === 'straight') { const L = part.bedLength || part.length; area = L * w; wallLen = 2 * L; }
+    else { const R = G.centerRadius(part, w), ri = R - w / 2, ro = R + w / 2, th = part.angle * G.D2R; area = th / 2 * (ro * ro - ri * ri); wallLen = th * (ri + ro); }
+    const mm3 = area * s.floorThickness + wallLen * s.wallHeight * s.wallThickness + s.jointVolume * 1000;
+    const grams = mm3 / 1000 * s.density * s.solidity;
+    return { grams, minutes: grams / s.gramsPerHour * 60 + s.overheadMin };
+  }
+  function estimate(part, width) {
+    const e = rawEstimate(part, width);
+    if (part.gramsOverride > 0 || part.minutesOverride > 0) {
+      const base = rawEstimate(part, 'single');
+      if (part.gramsOverride > 0) e.grams = part.gramsOverride * (e.grams / base.grams);
+      if (part.minutesOverride > 0) e.minutes = part.minutesOverride * (e.minutes / base.minutes);
+    }
+    return e;
+  }
+  function supportEstimate(h, width) {
+    const k = width === 'double' ? 1.7 : 1;
+    const grams = (settings.supportBaseG + settings.supportGPerMm * h) * k;
+    return { grams, minutes: grams / settings.gramsPerHour * 60 + settings.overheadMin };
+  }
+  function computeBom(out) {
+    const rows = {};
+    const add = (key, base) => { if (!rows[key]) rows[key] = Object.assign({ key, qty: 0, L: 0, R: 0 }, base); rows[key].qty++; return rows[key]; };
+    out.pieces.forEach((d) => {
+      const printId = d.part.bomAs || d.part.id;
+      const pp = partMap[printId] || d.part;
+      const e = estimate(pp, d.p.width);
+      const r = add(`${printId}|${d.p.width}`, { printId, name: pp.name, part: pp, width: d.p.width, gramsEach: e.grams, minutesEach: e.minutes, source: pp.source, sort: sortKey(pp) });
+      if (pp.type === 'curve') r[d.p.dir === 'L' ? 'L' : 'R']++;
+      if (d.part.bomAs) r.usedAsRamp = (r.usedAsRamp || 0) + 1;
+    });
+    // ramp supports at every raised joint / end
+    const spots = [];
+    out.joints.forEach(([a, b]) => { if (a.z > 0.5) spots.push({ z: a.z, width: a.width === 'double' || b.width === 'double' ? 'double' : 'single' }); });
+    out.openConnectors.forEach((c) => { if (c.z > 0.5) spots.push({ z: c.z, width: c.width }); });
+    spots.forEach((sp) => {
+      const h = Math.round(sp.z);
+      const e = supportEstimate(h, sp.width);
+      add(`SUP${h}|${sp.width}`, { printId: 'SUP', name: `Ramp support · h≈${h} mm`, width: sp.width, gramsEach: e.grams, minutesEach: e.minutes, source: 'ramp', support: true, sort: 'z' + String(h).padStart(5, '0') });
+    });
+    if (settings.clipsPerJoint > 0 && out.joints.length) {
+      const n = out.joints.length * settings.clipsPerJoint;
+      rows.CLIP = { key: 'CLIP', printId: 'CLIP', name: 'Track joint clip', width: 'single', qty: n, L: 0, R: 0, gramsEach: settings.clipGrams, minutesEach: settings.clipGrams / settings.gramsPerHour * 60, source: 'custom', sort: 'zz' };
+    }
+    const list = Object.values(rows).sort((a, b) => (a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : a.width < b.width ? -1 : 1));
+    list.forEach((r) => { r.gramsTotal = r.gramsEach * r.qty; r.minutesTotal = r.minutesEach * r.qty; });
+    return { rows: list, supports: spots.length };
+  }
+  function sortKey(p) {
+    const g = { straight: 'a', curve: 'b', ramp: 'c' }[p.group] || 'd';
+    return p.type === 'curve' ? `${g}${String(p.ir).padStart(4, '0')}${String(p.angle).padStart(3, '0')}${p.style || ''}` : `${g}${String(p.length).padStart(4, '0')}`;
+  }
+  function computeStats(out) {
+    const s = { length: 0, pieces: out.pieces.length, supports: out.bom.supports, grams: 0, minutes: 0 };
+    out.pieces.forEach((d) => { s.length += d.length; });
+    out.bom.rows.forEach((r) => { s.grams += r.gramsTotal; s.minutes += r.minutesTotal; });
+    const r = settings.filamentDiameter / 2;
+    s.filamentM = (s.grams / settings.density) * 1000 / (Math.PI * r * r) / 1000;
+    s.cost = settings.costPerKg > 0 ? s.grams / 1000 * settings.costPerKg : 0;
+    s.openEnds = out.openConnectors.length;
+    s.collisions = out.collisions.size;
+    s.outside = out.outside.size;
+    return s;
+  }
+
+  /* ---------- history ---------- */
+  const snap = () => JSON.stringify(design.pieces);
+  function mutate(fn, opts) {
+    const before = snap();
+    fn();
+    if (snap() === before) { refresh(); return; }
+    pushUndo(before);
+    afterChange();
+    if (!opts || !opts.keepGhost) updateGhost();
+  }
+  function pushUndo(before) { undoStack.push(before); if (undoStack.length > 200) undoStack.shift(); redoStack = []; }
+  function afterChange() {
+    dirty = true; design.modified = new Date().toISOString();
+    refresh();
+    autosave();
+    TinyTMT._emit('change', { design: clone(design) });
+  }
+  function undo() { if (!undoStack.length) return; redoStack.push(snap()); design.pieces = JSON.parse(undoStack.pop()); cleanupRefs(); afterChange(); updateGhost(); }
+  function redo() { if (!redoStack.length) return; undoStack.push(snap()); design.pieces = JSON.parse(redoStack.pop()); cleanupRefs(); afterChange(); updateGhost(); }
+  function cleanupRefs() {
+    const ids = new Set(design.pieces.map((p) => p.id));
+    selection = new Set([...selection].filter((id) => ids.has(id)));
+    if (activeEnd && !ids.has(activeEnd.pid)) activeEnd = null;
+  }
+  let autosaveT = 0;
+  function autosave() { clearTimeout(autosaveT); autosaveT = setTimeout(() => LS.set(KEYS.current, { design, dirty }), 300); }
+  function saveUi() { LS.set(KEYS.ui, { activePart: ui.activePart, width: ui.width, dir: ui.dir, rotation: ui.rotation, tool: ui.tool }); }
+
+  /* ---------- placement ---------- */
+  function makePiece(partId, conn, freePose) {
+    const part = partMap[partId];
+    const p = { id: uid(), part: partId, dir: ui.dir, width: ui.width, x: 0, y: 0, a: 0, z: 0 };
+    if (conn) {
+      if (conn.end === 1) Object.assign(p, { x: conn.x, y: conn.y, a: conn.out, z: conn.z });
+      else { Object.assign(p, G.solveEntry({ x: conn.x, y: conn.y, a: G.norm(conn.out + 180) }, G.exitLocal(part, p.dir, W(p.width)))); p.z = conn.z - (part.rise || 0); }
+    } else Object.assign(p, freePose);
+    p.x = round3(p.x); p.y = round3(p.y); p.a = round3(G.norm(p.a)); p.z = round3(p.z);
+    return p;
+  }
+  const round3 = (v) => Math.round(v * 1000) / 1000;
+  function snapGrid(v) { const g = settings.gridSize; return settings.snapToGrid ? Math.round(v / g) * g : v; }
+  function nearestOpen(w, excludePids, list) {
+    const lim = settings.snapPx / view.s;
+    let best = null, bd = lim;
+    (list || derived.openConnectors).forEach((c) => { if (excludePids && excludePids.has(c.pid)) return; const dd = Math.hypot(c.x - w.x, c.y - w.y); if (dd < bd) { bd = dd; best = c; } });
+    return best;
+  }
+  function evaluateGhost(p, attachPid) {
+    const d = pieceGeom(p);
+    d.invalid = d.z0 < -0.5 || d.z1 < -0.5;
+    d.collides = derived.pieces.some((o) => o.p.id !== attachPid && overlaps(d, o));
+    return d;
+  }
+  function updateGhost() {
+    ghost = null;
+    if (ui.tool !== 'place' && !paletteDrag) { render(); return; }
+    if (pointerWorld && (pointerOnCanvas || paletteDrag)) {
+      const c = nearestOpen(pointerWorld);
+      const p = makePiece(ui.activePart, c, { x: snapGrid(pointerWorld.x), y: snapGrid(pointerWorld.y), a: ui.rotation, z: 0 });
+      ghost = { piece: p, attach: c, d: evaluateGhost(p, c && c.pid) };
+    }
+    render();
+  }
+  function placeGhost() {
+    if (!ghost) return;
+    const g = ghost;
+    mutate(() => { design.pieces.push(g.piece); });
+    activeEnd = { pid: g.piece.id, end: g.attach && g.attach.end === 0 ? 0 : 1 };
+    if (g.d.collides) toast('Placed — but it overlaps another piece (shown in red).');
+    updateGhost();
+  }
+  function activeConn() {
+    if (!activeEnd || !derived.byId[activeEnd.pid]) return null;
+    return derived.byId[activeEnd.pid].conns[activeEnd.end];
+  }
+  function appendAtActiveEnd() {
+    let c = activeConn();
+    if (c && derived.partner[c.pid + ':' + c.end]) { toast('That end is already connected — click an open end (green dot) to continue from it.'); return; }
+    let p;
+    if (c) p = makePiece(ui.activePart, c);
+    else if (!design.pieces.length) p = makePiece(ui.activePart, null, { x: snapGrid(settings.workspaceW * 0.2), y: snapGrid(settings.workspaceH * 0.75), a: ui.rotation, z: 0 });
+    else { const oc = derived.openConnectors.find((q) => q.end === 1) || derived.openConnectors[0]; if (!oc) { toast('No open ends left — the track is a closed loop.'); return; } c = oc; p = makePiece(ui.activePart, oc); }
+    mutate(() => design.pieces.push(p));
+    activeEnd = { pid: p.id, end: c && c.end === 0 ? 0 : 1 };
+    render();
+  }
+
+  /* ---------- editing ops ---------- */
+  function neighbors(pid) { return [0, 1].map((e) => derived.partner[pid + ':' + e]).filter(Boolean).map((c) => c.pid); }
+  function componentFrom(startPid, excludePid) {
+    const seen = new Set([startPid]), q = [startPid];
+    while (q.length) { const id = q.shift(); neighbors(id).forEach((n) => { if (n !== excludePid && !seen.has(n)) { seen.add(n); q.push(n); } }); }
+    return seen;
+  }
+  function chainOf(pid) { return componentFrom(pid, null); }
+  /** Replace a piece's part/dir/width keeping its entry, and carry the downstream chain along. */
+  function replacePiece(pid, changes) {
+    const p = design.pieces.find((q) => q.id === pid); if (!p) return;
+    const d0 = derived.byId[pid], oldExit = d0.conns[1];
+    const nextConn = derived.partner[pid + ':1'];
+    let down = null;
+    if (nextConn) {
+      down = componentFrom(nextConn.pid, pid);
+      const prev = derived.partner[pid + ':0'];
+      if (prev && down.has(prev.pid)) down = null; // closed loop: can't reflow
+    }
+    mutate(() => {
+      Object.assign(p, changes);
+      const nd = pieceGeom(p), ne = nd.conns[1];
+      if (down) {
+        const da = ne.out - oldExit.out, dz = ne.z - oldExit.z;
+        design.pieces.forEach((q) => {
+          if (!down.has(q.id)) return;
+          const r = G.rot(q.x - oldExit.x, q.y - oldExit.y, da);
+          q.x = round3(ne.x + r.x); q.y = round3(ne.y + r.y); q.a = round3(G.norm(q.a + da)); q.z = round3((q.z || 0) + dz);
+        });
+      }
+    });
+  }
+  function deleteSelection() {
+    if (!selection.size) {
+      if (ui.tool === 'place' && activeEnd) { selection = new Set([activeEnd.pid]); }
+      else return;
+    }
+    let newActive = null;
+    if (activeEnd && selection.has(activeEnd.pid)) {
+      const back = derived.partner[activeEnd.pid + ':' + (activeEnd.end === 1 ? 0 : 1)];
+      if (back && !selection.has(back.pid)) newActive = { pid: back.pid, end: back.end };
+    }
+    const del = new Set(selection);
+    mutate(() => { design.pieces = design.pieces.filter((p) => !del.has(p.id)); });
+    selection.clear();
+    if (activeEnd && del.has(activeEnd.pid)) activeEnd = newActive;
+    refresh(); updateGhost();
+  }
+  function rotateSelection(sign) {
+    const step = settings.rotationStep * sign;
+    if (!selection.size) { ui.rotation = G.norm(ui.rotation + step); saveUi(); updateGhost(); refreshHud(); return; }
+    const ds = [...selection].map((id) => derived.byId[id]).filter(Boolean);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    ds.forEach((d) => { x0 = Math.min(x0, d.bbox.x0); y0 = Math.min(y0, d.bbox.y0); x1 = Math.max(x1, d.bbox.x1); y1 = Math.max(y1, d.bbox.y1); });
+    const cx = snapGrid((x0 + x1) / 2), cy = snapGrid((y0 + y1) / 2);
+    mutate(() => design.pieces.forEach((p) => {
+      if (!selection.has(p.id)) return;
+      const r = G.rot(p.x - cx, p.y - cy, step);
+      p.x = round3(cx + r.x); p.y = round3(cy + r.y); p.a = round3(G.norm(p.a + step));
+    }));
+  }
+  function flip() {
+    const curves = [...selection].filter((id) => { const d = derived.byId[id]; return d && d.part.type === 'curve'; });
+    if (!curves.length) { ui.dir = ui.dir === 'L' ? 'R' : 'L'; saveUi(); syncControls(); updateGhost(); return; }
+    if (curves.length === 1) { const p = design.pieces.find((q) => q.id === curves[0]); replacePiece(p.id, { dir: p.dir === 'L' ? 'R' : 'L' }); return; }
+    mutate(() => design.pieces.forEach((p) => { if (curves.includes(p.id)) p.dir = p.dir === 'L' ? 'R' : 'L'; }));
+  }
+  function setWidth(width) {
+    ui.width = width; saveUi(); syncControls();
+    if (selection.size === 1) { const id = [...selection][0]; replacePiece(id, { width }); }
+    else if (selection.size) mutate(() => design.pieces.forEach((p) => { if (selection.has(p.id)) p.width = width; }));
+    updateGhost();
+  }
+  function cycleList(kind) {
+    return visibleParts().filter((p) => (kind === 'curve' ? p.type === 'curve' && p.cycleCurve : p.group === 'straight' && p.cycleStraight)).sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : 1));
+  }
+  function cycle(kind, delta) {
+    const list = cycleList(kind);
+    if (!list.length) { toast('No pieces in this arrow-key cycle — enable some in Settings → Parts.'); return; }
+    const single = selection.size === 1 && ui.tool === 'select' ? design.pieces.find((p) => p.id === [...selection][0]) : null;
+    const cur = single ? single.part : ui.activePart;
+    let i = list.findIndex((p) => p.id === cur), next;
+    if (i < 0) { const def = kind === 'curve' ? settings.defaultCurve : settings.defaultStraight; next = list.find((p) => p.id === def) || list[0]; }
+    else next = list[(i + delta + list.length) % list.length];
+    if (single) { replacePiece(single.id, { part: next.id }); toast(`Swapped to ${next.name}`, 900); }
+    setActivePart(next.id, true);
+  }
+  function setActivePart(id, keepTool) {
+    if (!partMap[id]) return;
+    ui.activePart = id; saveUi();
+    if (!keepTool) setTool('place');
+    $$('.pcard').forEach((c) => c.classList.toggle('on', c.dataset.part === id));
+    const card = $(`.pcard[data-part="${id}"]`);
+    if (card) { const det = card.closest('details'); if (det && !det.open) det.open = true; card.scrollIntoView({ block: 'nearest' }); }
+    updateGhost(); refreshHud();
+  }
+  function setTool(t) {
+    ui.tool = t; saveUi();
+    $$('.tool[data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === t));
+    canvas.style.cursor = t === 'place' ? 'crosshair' : 'default';
+    if (t === 'place') { selection.clear(); refreshSide(); }
+    updateGhost(); refreshHud();
+  }
+
+  /* ---------- view ---------- */
+  function sizeCanvas() {
+    const r = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    return r;
+  }
+  function fitView(rect) {
+    const r = sizeCanvas(), b = rect || overflowRect();
+    const s = Math.min((r.width - 40) / (b.x1 - b.x0), (r.height - 90) / (b.y1 - b.y0));
+    view.s = Math.max(0.02, s);
+    view.ox = r.width / 2 - ((b.x0 + b.x1) / 2) * view.s;
+    view.oy = r.height / 2 + 20 - ((b.y0 + b.y1) / 2) * view.s;
+    render(); refreshZoom();
+  }
+  function zoomAt(sx, sy, f) {
+    const ns = Math.min(10, Math.max(0.02, view.s * f));
+    const wx = (sx - view.ox) / view.s, wy = (sy - view.oy) / view.s;
+    view.s = ns; view.ox = sx - wx * ns; view.oy = sy - wy * ns;
+    render(); refreshZoom(); updateGhost();
+  }
+  function workspaceFit() { const r = canvas.getBoundingClientRect(), b = overflowRect(); return Math.max(0.02, Math.min((r.width - 40) / (b.x1 - b.x0), (r.height - 90) / (b.y1 - b.y0))); }
+  function refreshZoom() { $('#tZoomFit').textContent = Math.round((view.s / workspaceFit()) * 100) + '%'; }
+  const toWorld = (sx, sy) => ({ x: (sx - view.ox) / view.s, y: (sy - view.oy) / view.s });
+  function eventWorld(e) { const r = canvas.getBoundingClientRect(); return toWorld(e.clientX - r.left, e.clientY - r.top); }
+
+  /* ---------- rendering ---------- */
+  let rafPending = false;
+  function render() { if (!rafPending) { rafPending = true; requestAnimationFrame(draw); } }
+  const COL = {
+    outside: '#e2e7ee', overflow: '#f3f5f9', ws: '#ffffff', grid: '#edf0f5', gridMajor: '#d5dce7', wsBorder: '#14213d',
+    floor: '#dce7fb', wall: '#22407a', center: '#9fb3d9', upFloor: '#fde8c2', upWall: '#9a5b00',
+    badFloor: '#ffd9d9', badWall: '#c62828', sel: '#2f7cf6', open: '#2e9e6a', active: '#2f7cf6'
+  };
+  function poly(pts) { ctx.beginPath(); pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y))); }
+  function draw() {
+    rafPending = false;
+    const r = sizeCanvas(), dpr = window.devicePixelRatio || 1, s = view.s;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = COL.outside; ctx.fillRect(0, 0, r.width, r.height);
+    ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * view.ox, dpr * view.oy);
+    const px = 1 / s;
+    const ov = derived.overflow, ws = derived.workspace;
+    ctx.fillStyle = COL.overflow; ctx.fillRect(ov.x0, ov.y0, ov.x1 - ov.x0, ov.y1 - ov.y0);
+    ctx.fillStyle = COL.ws; ctx.fillRect(ws.x0, ws.y0, ws.x1 - ws.x0, ws.y1 - ws.y0);
+    // grid
+    const g = settings.gridSize, major = g * settings.majorEvery;
+    const vis = { x0: Math.max(ov.x0, -view.ox / s), y0: Math.max(ov.y0, -view.oy / s), x1: Math.min(ov.x1, (r.width - view.ox) / s), y1: Math.min(ov.y1, (r.height - view.oy) / s) };
+    const lines = (step, color, width) => {
+      ctx.strokeStyle = color; ctx.lineWidth = width * px; ctx.beginPath();
+      for (let x = Math.ceil(vis.x0 / step) * step; x <= vis.x1; x += step) { ctx.moveTo(x, vis.y0); ctx.lineTo(x, vis.y1); }
+      for (let y = Math.ceil(vis.y0 / step) * step; y <= vis.y1; y += step) { ctx.moveTo(vis.x0, y); ctx.lineTo(vis.x1, y); }
+      ctx.stroke();
+    };
+    if (g * s >= 6) lines(g, COL.grid, 1);
+    if (major * s >= 6) lines(major, COL.gridMajor, 1);
+    ctx.setLineDash([6 * px, 5 * px]); ctx.strokeStyle = '#b9c3d3'; ctx.lineWidth = px; ctx.strokeRect(ov.x0, ov.y0, ov.x1 - ov.x0, ov.y1 - ov.y0); ctx.setLineDash([]);
+    ctx.strokeStyle = COL.wsBorder; ctx.lineWidth = 2 * px; ctx.strokeRect(ws.x0, ws.y0, ws.x1 - ws.x0, ws.y1 - ws.y0);
+    drawRulers(ws, s);
+
+    [...derived.pieces].sort((a, b) => Math.max(a.z0, a.z1) - Math.max(b.z0, b.z1)).forEach((d) => drawPiece(d, {
+      sel: selection.has(d.p.id), hover: hoverPid === d.p.id, bad: derived.collisions.has(d.p.id) || derived.below.includes(d.p.id),
+      outside: derived.outside.has(d.p.id), oob: derived.oob.has(d.p.id)
+    }));
+    if (design.pieces.length) drawStart(derived.byId[design.pieces[0].id]);
+    // connectors
+    const showConns = true;
+    if (showConns) {
+      derived.openConnectors.forEach((c) => {
+        ctx.beginPath(); ctx.arc(c.x, c.y, 5.5 * px, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.lineWidth = 2.2 * px; ctx.strokeStyle = COL.open; ctx.stroke();
+        const v = G.rot(1, 0, c.out); ctx.beginPath(); ctx.moveTo(c.x + v.x * 7 * px, c.y + v.y * 7 * px); ctx.lineTo(c.x + v.x * 14 * px, c.y + v.y * 14 * px); ctx.stroke();
+      });
+      derived.mismatch.forEach((c) => { ctx.beginPath(); ctx.arc(c.x, c.y, 6 * px, 0, Math.PI * 2); ctx.fillStyle = '#e69500'; ctx.fill(); });
+    }
+    const ac = activeConn();
+    if (ac && !derived.partner[ac.pid + ':' + ac.end]) {
+      ctx.beginPath(); ctx.arc(ac.x, ac.y, 10 * px, 0, Math.PI * 2); ctx.lineWidth = 2.5 * px; ctx.strokeStyle = COL.active; ctx.stroke();
+      if (ui.tool === 'place' && !(ghost && pointerOnCanvas)) {
+        const p = makePiece(ui.activePart, ac); const d = pieceGeom(p);
+        ctx.setLineDash([5 * px, 4 * px]); poly(d.outline); ctx.closePath(); ctx.strokeStyle = 'rgba(47,124,246,.7)'; ctx.lineWidth = 1.5 * px; ctx.stroke(); ctx.setLineDash([]);
+        labelAt(d, 'Enter ↵', 'rgba(47,124,246,.9)');
+      }
+    }
+    if (ghost) drawGhost(ghost.d);
+    if (drag && drag.type === 'band') {
+      const a = drag.start, b = drag.cur;
+      ctx.fillStyle = 'rgba(47,124,246,.08)'; ctx.strokeStyle = COL.sel; ctx.lineWidth = px;
+      ctx.fillRect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+      ctx.strokeRect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+    }
+  }
+  function drawRulers(ws, s) {
+    const dpr = window.devicePixelRatio || 1;
+    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.font = '600 11px system-ui, sans-serif'; ctx.fillStyle = '#5b6b85'; ctx.textBaseline = 'bottom';
+    const sx = (x) => x * s + view.ox, sy = (y) => y * s + view.oy;
+    const step = s * 500 > 70 ? 500 : 1000;
+    ctx.textAlign = 'center';
+    for (let x = 0; x <= ws.x1 + 0.1; x += step) ctx.fillText(x === 0 ? '0' : (x / 1000).toFixed(1) + ' m', sx(x), sy(0) - 5);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let y = step; y <= ws.y1 + 0.1; y += step) ctx.fillText((y / 1000).toFixed(1) + ' m', sx(0) - 6, sy(y));
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#14213d'; ctx.font = '700 12px system-ui, sans-serif';
+    ctx.fillText(`Workspace ${settings.workspaceW} × ${settings.workspaceH} mm`, sx(0), sy(0) - 20);
+    ctx.restore();
+  }
+  function drawPiece(d, st) {
+    const px = 1 / view.s, up = d.z0 > 0.5 || d.z1 > 0.5;
+    poly(d.outline); ctx.closePath();
+    if (st.sel) { ctx.save(); ctx.strokeStyle = COL.sel; ctx.lineWidth = 6 * px; ctx.globalAlpha = 0.35; ctx.stroke(); ctx.restore(); }
+    ctx.fillStyle = st.bad ? COL.badFloor : up ? COL.upFloor : COL.floor; ctx.fill();
+    ctx.lineWidth = px; ctx.strokeStyle = st.bad ? COL.badWall : 'rgba(34,64,122,.45)'; ctx.stroke();
+    const wall = st.bad ? COL.badWall : up ? COL.upWall : COL.wall;
+    ctx.strokeStyle = wall; ctx.lineWidth = Math.max(d.wallT, 1.6 * px); ctx.lineCap = 'butt';
+    poly(d.railL); ctx.stroke(); poly(d.railR); ctx.stroke();
+    if (settings.showCenterline && d.W * view.s > 18) { ctx.setLineDash([5 * px, 5 * px]); ctx.lineWidth = px; ctx.strokeStyle = COL.center; poly(d.center); ctx.stroke(); ctx.setLineDash([]); }
+    if (d.part.rise) {
+      const m = d.center[Math.floor(d.center.length * 0.22)], dirUp = d.part.rise > 0 ? 1 : -1, L = d.W * 0.2;
+      ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(d.headingMid * G.D2R); ctx.strokeStyle = wall; ctx.lineWidth = 2 * px;
+      for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(k * L - dirUp * L * 0.45, -L); ctx.lineTo(k * L + dirUp * L * 0.45, 0); ctx.lineTo(k * L - dirUp * L * 0.45, L); ctx.stroke(); }
+      ctx.restore();
+    }
+    if (st.outside || st.oob) { poly(d.outline); ctx.closePath(); ctx.setLineDash([4 * px, 3 * px]); ctx.lineWidth = 2 * px; ctx.strokeStyle = st.oob ? COL.badWall : '#e69500'; ctx.stroke(); ctx.setLineDash([]); }
+    if (st.hover && !st.sel) { poly(d.outline); ctx.closePath(); ctx.lineWidth = 2 * px; ctx.strokeStyle = 'rgba(47,124,246,.6)'; ctx.stroke(); }
+    if (st.sel) { poly(d.outline); ctx.closePath(); ctx.lineWidth = 2 * px; ctx.strokeStyle = COL.sel; ctx.stroke(); }
+    if (settings.showLabels && d.W * view.s > 34) labelAt(d, d.shortLabel + (up ? `  z${Math.round(d.z1)}` : ''), st.bad ? COL.badWall : wall);
+  }
+  function labelAt(d, text, color) {
+    const m = d.center[Math.floor(d.center.length / 2)], dpr = window.devicePixelRatio || 1;
+    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const x = m.x * view.s + view.ox, y = m.y * view.s + view.oy;
+    ctx.font = '600 11px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(text).width + 8;
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; roundRect(x - w / 2, y - 8, w, 16, 4); ctx.fill();
+    ctx.fillStyle = color; ctx.fillText(text, x, y + 0.5);
+    ctx.restore();
+  }
+  function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function drawStart(d) {
+    if (!d) return;
+    const n = 6, w = d.W, sq = w / n;
+    ctx.save(); ctx.translate(d.p.x, d.p.y); ctx.rotate(d.p.a * G.D2R);
+    for (let i = 0; i < n; i++) for (let j = 0; j < 2; j++) { ctx.fillStyle = (i + j) % 2 ? '#14213d' : '#ffffff'; ctx.fillRect(j * sq * 0.6, -w / 2 + i * sq, sq * 0.6, sq); }
+    ctx.restore();
+  }
+  function drawGhost(d) {
+    const px = 1 / view.s, bad = d.collides || d.invalid;
+    poly(d.outline); ctx.closePath();
+    ctx.fillStyle = bad ? 'rgba(214,69,69,.22)' : 'rgba(47,124,246,.20)'; ctx.fill();
+    ctx.setLineDash([6 * px, 4 * px]); ctx.lineWidth = 1.8 * px; ctx.strokeStyle = bad ? '#d64545' : '#2f7cf6'; ctx.stroke(); ctx.setLineDash([]);
+    ctx.lineWidth = Math.max(d.wallT, 1.4 * px); ctx.strokeStyle = bad ? 'rgba(214,69,69,.7)' : 'rgba(34,64,122,.55)';
+    poly(d.railL); ctx.stroke(); poly(d.railR); ctx.stroke();
+    // entry arrow
+    const c = d.conns[0], v = G.rot(1, 0, d.p.a);
+    ctx.beginPath(); ctx.arc(c.x, c.y, 4 * px, 0, Math.PI * 2); ctx.fillStyle = bad ? '#d64545' : '#2f7cf6'; ctx.fill();
+    const m = d.center[Math.floor(d.center.length / 2)], hv = G.rot(1, 0, d.headingMid), L = 14 * px;
+    ctx.beginPath(); ctx.moveTo(m.x - hv.x * L, m.y - hv.y * L); ctx.lineTo(m.x + hv.x * L, m.y + hv.y * L);
+    const n1 = G.rot(-8 * px, -6 * px, d.headingMid), n2 = G.rot(-8 * px, 6 * px, d.headingMid);
+    ctx.moveTo(m.x + hv.x * L + n1.x, m.y + hv.y * L + n1.y); ctx.lineTo(m.x + hv.x * L, m.y + hv.y * L); ctx.lineTo(m.x + hv.x * L + n2.x, m.y + hv.y * L + n2.y);
+    ctx.lineWidth = 2 * px; ctx.strokeStyle = bad ? '#d64545' : '#2f7cf6'; ctx.stroke();
+    void v;
+  }
+
+  /* ---------- UI refresh ---------- */
+  function refresh() {
+    derived = derive();
+    render(); refreshStats(); refreshSide(); refreshHud();
+    $('#dirtyDot').classList.toggle('on', dirty);
+    $('#tUndo').disabled = !undoStack.length; $('#tRedo').disabled = !redoStack.length;
+  }
+  function fmtLen(mm) { return (mm / 1000).toFixed(2) + ' m'; }
+  function fmtG(g) { return g >= 1000 ? (g / 1000).toFixed(2) + ' kg' : Math.round(g) + ' g'; }
+  function refreshStats() {
+    const s = derived.stats;
+    $('#stLength').textContent = fmtLen(s.length);
+    $('#stPieces').textContent = s.pieces + (s.supports ? ` + ${s.supports} supports` : '');
+    $('#stTime').textContent = BP.fmtTime(s.minutes);
+    $('#stMaterial').textContent = `${fmtG(s.grams)} · ${s.filamentM.toFixed(0)} m` + (s.cost ? ` · ${settings.currency}${s.cost.toFixed(2)}` : '');
+    const flags = [];
+    if (s.pieces) flags.push(s.openEnds === 0 ? '<span class="flag ok">✓ Closed loop</span>' : `<span class="flag">${s.openEnds} open end${s.openEnds === 1 ? '' : 's'}</span>`);
+    if (s.collisions) flags.push(`<span class="flag bad">${s.collisions} overlapping</span>`);
+    if (s.outside) flags.push(`<span class="flag warn">${s.outside} outside workspace</span>`);
+    if (derived.mismatch.length) flags.push(`<span class="flag warn">${derived.mismatch.length} width mismatch</span>`);
+    if (derived.below.length) flags.push(`<span class="flag bad">${derived.below.length} below floor</span>`);
+    $('#stFlags').innerHTML = flags.join('');
+  }
+  function refreshHud() {
+    const p = partMap[ui.activePart];
+    const hud = $('#hud');
+    if (ui.tool === 'place') {
+      hud.innerHTML = `Placing <b>${esc(p ? p.name : '?')}</b> · ${ui.width} · ${p && p.type === 'curve' ? (ui.dir === 'L' ? 'left' : 'right') + ' · ' : ''}${Math.round(ui.rotation)}°<br>` +
+        `Click to place · <kbd>↑</kbd><kbd>↓</kbd> curves · <kbd>←</kbd><kbd>→</kbd> straights · <kbd>R</kbd> rotate · <kbd>F</kbd> flip · <kbd>Enter</kbd> add to end · <kbd>V</kbd> select`;
+    } else {
+      hud.innerHTML = selection.size
+        ? `<b>${selection.size}</b> selected · drag to move · <kbd>Del</kbd> delete · <kbd>R</kbd> rotate · <kbd>F</kbd> flip${selection.size === 1 ? ' · arrows swap piece' : ''} · double-click selects chain`
+        : `Click a piece to select · drag to box-select · drag empty space with <kbd>Space</kbd> or right mouse to pan · <kbd>P</kbd> place`;
+    }
+  }
+  function sourceLink(src) { const s = P.SOURCES[src]; return s && s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a>` : esc((s && s.label) || 'Custom'); }
+  function refreshSide() {
+    const rows = derived.bom.rows, st = derived.stats;
+    const bom = $('#tab-bom');
+    if (!rows.length) bom.innerHTML = '<div class="empty">No pieces yet.<br>Pick a piece on the left and click the grid — or press <kbd>Enter</kbd> to start a track.</div>';
+    else {
+      bom.innerHTML = `<table class="bom-table"><thead><tr><th>Qty</th><th>Part</th><th class="n">g</th><th class="n">Time</th></tr></thead><tbody>` +
+        rows.map((r) => `<tr><td><span class="qty">${r.qty}</span></td><td>${esc(r.name)}${r.width === 'double' ? ' <b>· double</b>' : ''}
+          <span class="sub">${r.L || r.R ? [r.L ? `${r.L}× left` : '', r.R ? `${r.R}× right` : ''].filter(Boolean).join(', ') + ' · ' : ''}${r.usedAsRamp ? `${r.usedAsRamp}× as ramp bed · ` : ''}${sourceLink(r.source)}</span></td>
+          <td class="n">${Math.round(r.gramsTotal)}<span class="sub">${Math.round(r.gramsEach)} ea</span></td><td class="n">${BP.fmtTime(r.minutesTotal)}</td></tr>`).join('') +
+        `</tbody><tfoot><tr><td>${rows.reduce((a, r) => a + r.qty, 0)}</td><td>Total to print</td><td class="n">${fmtG(st.grams)}</td><td class="n">${BP.fmtTime(st.minutes)}</td></tr></tfoot></table>
+        <div class="row-btns"><button class="sbtn" data-act="csv">Download CSV</button><button class="sbtn" data-act="copybom">Copy as text</button><button class="sbtn" data-act="png">Blueprint PNG</button></div>
+        <p class="note">PETG estimates use ${settings.wallThickness} mm walls, ${settings.floorThickness} mm floor, ${Math.round(settings.solidity * 100)}% solidity and ${settings.gramsPerHour} g/h. Enter slicer values per part in Settings → Parts for exact numbers. Supports are counted at every raised joint.</p>`;
+    }
+    const ins = $('#tab-inspect');
+    if (selection.size === 1) {
+      const d = derived.byId[[...selection][0]]; if (!d) return;
+      const p = d.p, e = estimate(partMap[d.part.bomAs] || d.part, p.width);
+      const opts = visibleParts().map((q) => `<option value="${q.id}" ${q.id === p.part ? 'selected' : ''}>${esc(q.name)}</option>`).join('');
+      ins.innerHTML = `<dl class="kv">
+        <dt>Piece</dt><dd><select id="insPart" style="width:100%">${opts}</select></dd>
+        <dt>Width</dt><dd><div class="seg" id="insWidth"><button data-v="single" class="${p.width === 'single' ? 'on' : ''}">Single</button><button data-v="double" class="${p.width === 'double' ? 'on' : ''}">Double</button></div></dd>
+        ${d.part.type === 'curve' ? `<dt>Direction</dt><dd><div class="seg" id="insDir"><button data-v="L" class="${p.dir === 'L' ? 'on' : ''}">Left</button><button data-v="R" class="${p.dir === 'R' ? 'on' : ''}">Right</button></div></dd>` : ''}
+        <dt>Position</dt><dd>${Math.round(p.x)}, ${Math.round(p.y)} mm</dd>
+        <dt>Heading</dt><dd>${Math.round(p.a * 10) / 10}°</dd>
+        <dt>Elevation</dt><dd>${Math.round(d.z0)} → ${Math.round(d.z1)} mm</dd>
+        <dt>Run length</dt><dd>${Math.round(d.length)} mm</dd>
+        <dt>Est. print</dt><dd>${Math.round(e.grams)} g · ${BP.fmtTime(e.minutes)}</dd>
+        <dt>Source</dt><dd>${sourceLink(d.part.source)}</dd>
+        ${d.part.nominal ? '<dt></dt><dd class="note">Nominal dimensions — verify against the STL.</dd>' : ''}
+      </dl>
+      <div class="row-btns"><button class="sbtn" data-act="rotate">⟳ Rotate</button>${d.part.type === 'curve' ? '<button class="sbtn" data-act="flip">⇋ Flip</button>' : ''}<button class="sbtn" data-act="chain">Select chain</button><button class="sbtn danger" data-act="delete">Delete</button></div>`;
+      $('#insPart').onchange = (ev) => replacePiece(p.id, { part: ev.target.value });
+      $$('#insWidth button').forEach((b) => (b.onclick = () => replacePiece(p.id, { width: b.dataset.v })));
+      $$('#insDir button').forEach((b) => (b.onclick = () => replacePiece(p.id, { dir: b.dataset.v })));
+    } else if (selection.size > 1) {
+      let L = 0; selection.forEach((id) => { const d = derived.byId[id]; if (d) L += d.length; });
+      ins.innerHTML = `<p><b>${selection.size}</b> pieces selected · ${fmtLen(L)} of track.</p><div class="row-btns"><button class="sbtn" data-act="rotate">⟳ Rotate group</button><button class="sbtn" data-act="flip">⇋ Flip curves</button><button class="sbtn danger" data-act="delete">Delete</button></div>`;
+    } else {
+      ins.innerHTML = `<dl class="kv"><dt>Title</dt><dd>${esc(design.title)}</dd><dt>Created</dt><dd>${new Date(design.created).toLocaleString()}</dd>
+        <dt>Modified</dt><dd>${new Date(design.modified).toLocaleString()}</dd><dt>Lane</dt><dd>${settings.laneWidth} mm, walls ${settings.wallHeight} mm</dd>
+        <dt>Width</dt><dd>single ${W('single')} mm · double ${W('double')} mm</dd><dt>Elevation</dt><dd>${Math.round(derived.zMin)} → ${Math.round(derived.zMax)} mm</dd></dl>
+        <p class="note">Select a piece (press <kbd>V</kbd>) to edit it here.</p>`;
+    }
+  }
+  function syncControls() {
+    $$('[data-width]').forEach((b) => b.classList.toggle('on', b.dataset.width === ui.width));
+    $$('[data-dir]').forEach((b) => b.classList.toggle('on', b.dataset.dir === ui.dir));
+    $('#trackTitle').value = design.title;
+    refreshHud();
+  }
+
+  /* ---------- palette ---------- */
+  function buildPalette() {
+    const host = $('#paletteGroups'), q = ($('#partSearch').value || '').toLowerCase();
+    host.innerHTML = '';
+    P.GROUPS.forEach((grp) => {
+      const items = visibleParts().filter((p) => p.group === grp.id && (!q || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)));
+      if (!items.length) return;
+      const det = document.createElement('details'); det.className = 'pgroup'; det.open = true;
+      det.innerHTML = `<summary><span class="grp-label">${grp.label}</span>${grp.hint ? `<kbd>${grp.hint}</kbd>` : ''}</summary><div class="pgrid"></div>`;
+      const grid = $('.pgrid', det);
+      items.sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : 1)).forEach((p) => {
+        const b = document.createElement('button');
+        b.className = 'pcard' + (p.id === ui.activePart ? ' on' : ''); b.dataset.part = p.id; b.title = p.name + (p.nominal ? ' (nominal dimensions)' : '');
+        const meta = p.type === 'curve' ? `${p.angle}° · IR ${p.ir}` : p.rise ? `${p.rise > 0 ? '+' : ''}${p.rise} mm · ${p.length} plan` : `${p.length} mm`;
+        b.innerHTML = `${p.id === settings.defaultStraight || p.id === settings.defaultCurve ? '<span class="pdef">DEFAULT</span>' : ''}<canvas></canvas><div class="pname">${esc(p.name)}</div><div class="pmeta">${meta}</div>`;
+        grid.appendChild(b);
+        requestAnimationFrame(() => drawThumb($('canvas', b), p));
+        b.addEventListener('pointerdown', (e) => startPaletteDrag(e, p.id));
+      });
+      host.appendChild(det);
+    });
+  }
+  function drawThumb(cv, part) {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    cv.width = Math.max(10, r.width * dpr); cv.height = Math.max(10, r.height * dpr);
+    const c = cv.getContext('2d'), w = W('single');
+    const fake = { id: 't', part: part.id, x: 0, y: 0, a: part.type === 'curve' ? -part.angle / 2 : 0, z: 0, dir: 'R', width: 'single' };
+    const d = pieceGeom(fake);
+    const b = d.bbox, pad = 6 * dpr, sc = Math.min((cv.width - 2 * pad) / (b.x1 - b.x0), (cv.height - 2 * pad) / (b.y1 - b.y0));
+    c.setTransform(sc, 0, 0, sc, cv.width / 2 - ((b.x0 + b.x1) / 2) * sc, cv.height / 2 - ((b.y0 + b.y1) / 2) * sc);
+    const pl = (pts) => { c.beginPath(); pts.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y))); };
+    pl(d.outline); c.closePath(); c.fillStyle = part.rise ? COL.upFloor : COL.floor; c.fill();
+    c.strokeStyle = part.rise ? COL.upWall : COL.wall; c.lineWidth = Math.max(w * 0.05, 1.5 / sc);
+    pl(d.railL); c.stroke(); pl(d.railR); c.stroke();
+  }
+  function startPaletteDrag(e, partId) {
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY, card = e.currentTarget;
+    card.setPointerCapture(e.pointerId);
+    let started = false, label = null;
+    const move = (ev) => {
+      if (!started && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 6) {
+        started = true; paletteDrag = { partId }; ui.activePart = partId; setActivePart(partId, true);
+        label = document.createElement('div'); label.className = 'drag-ghost'; label.textContent = partMap[partId].name; document.body.appendChild(label);
+      }
+      if (!started) return;
+      label.style.left = ev.clientX + 'px'; label.style.top = ev.clientY + 'px';
+      const r = canvas.getBoundingClientRect();
+      const over = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+      pointerOnCanvas = over; pointerWorld = over ? toWorld(ev.clientX - r.left, ev.clientY - r.top) : null;
+      label.style.display = over ? 'none' : '';
+      updateGhost();
+    };
+    const up = (ev) => {
+      card.removeEventListener('pointermove', move); card.removeEventListener('pointerup', up); card.removeEventListener('pointercancel', up);
+      if (label) label.remove();
+      if (!started) { setActivePart(partId); canvas.focus(); return; }
+      const r = canvas.getBoundingClientRect();
+      const over = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+      if (over && ghost) placeGhost();
+      paletteDrag = null; setTool('place'); pointerOnCanvas = over; updateGhost(); canvas.focus();
+    };
+    card.addEventListener('pointermove', move); card.addEventListener('pointerup', up); card.addEventListener('pointercancel', up);
+  }
+
+  /* ---------- canvas input ---------- */
+  function hitPiece(w) { for (let i = derived.pieces.length - 1; i >= 0; i--) if (localHit(derived.pieces[i], w.x, w.y, 0) >= 0) return derived.pieces[i].p.id; return null; }
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('pointerdown', (e) => {
+    canvas.focus();
+    canvas.setPointerCapture(e.pointerId);
+    const w = eventWorld(e), r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
+    if (e.button === 1 || e.button === 2 || spaceDown) { drag = { type: 'pan', sx, sy, ox: view.ox, oy: view.oy }; canvas.style.cursor = 'grabbing'; return; }
+    if (e.button !== 0) return;
+    if (ui.tool === 'place') { pointerWorld = w; pointerOnCanvas = true; updateGhost(); drag = { type: 'place', sx, sy, ox: view.ox, oy: view.oy }; return; }
+    const hit = hitPiece(w);
+    const oc = nearestOpen(w);
+    if (oc && (!hit || Math.hypot(oc.x - w.x, oc.y - w.y) < 12 / view.s)) { activeEnd = { pid: oc.pid, end: oc.end }; render(); toast('Active end set — press P then Enter to add pieces here.', 1600); }
+    if (hit) {
+      if (e.shiftKey) { selection.has(hit) ? selection.delete(hit) : selection.add(hit); refresh(); return; }
+      if (!selection.has(hit)) { selection = new Set([hit]); }
+      const moving = new Set(selection);
+      const targets = derived.connectors.filter((c) => !moving.has(c.pid) && (!derived.partner[c.pid + ':' + c.end] || moving.has(derived.partner[c.pid + ':' + c.end].pid)));
+      const movers = [];
+      moving.forEach((id) => [0, 1].forEach((end) => { const q = derived.partner[id + ':' + end]; if (!q || !moving.has(q.pid)) movers.push(derived.byId[id].conns[end]); }));
+      drag = { type: 'move', start: w, before: snap(), orig: design.pieces.filter((p) => moving.has(p.id)).map((p) => ({ id: p.id, x: p.x, y: p.y, a: p.a, z: p.z })), moving, targets, movers, moved: false };
+      refresh();
+    } else {
+      if (!e.shiftKey) selection.clear();
+      drag = { type: 'band', start: w, cur: w, add: e.shiftKey, base: new Set(selection) };
+      refresh();
+    }
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    const r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top, w = toWorld(sx, sy);
+    pointerWorld = w; pointerOnCanvas = true;
+    $('#stCursor').textContent = `x ${Math.round(w.x)} · y ${Math.round(w.y)} mm`;
+    if (!drag) {
+      if (ui.tool === 'place') updateGhost();
+      else { const h = hitPiece(w); if (h !== hoverPid) { hoverPid = h; canvas.style.cursor = h ? 'move' : 'default'; render(); } }
+      return;
+    }
+    if (drag.type === 'place' && Math.hypot(sx - drag.sx, sy - drag.sy) > 5) { drag.type = 'pan'; canvas.style.cursor = 'grabbing'; ghost = null; }
+    if (drag.type === 'pan') { view.ox = drag.ox + (sx - drag.sx); view.oy = drag.oy + (sy - drag.sy); render(); return; }
+    if (drag.type === 'band') {
+      drag.cur = w;
+      const x0 = Math.min(drag.start.x, w.x), x1 = Math.max(drag.start.x, w.x), y0 = Math.min(drag.start.y, w.y), y1 = Math.max(drag.start.y, w.y);
+      selection = new Set(drag.base);
+      derived.pieces.forEach((d) => { if (d.bbox.x0 <= x1 && d.bbox.x1 >= x0 && d.bbox.y0 <= y1 && d.bbox.y1 >= y0 && d.center.some((q) => q.x >= x0 && q.x <= x1 && q.y >= y0 && q.y <= y1)) selection.add(d.p.id); });
+      render(); return;
+    }
+    if (drag.type === 'move') moveDrag(w);
+  });
+  function moveDrag(w) {
+    let dx = w.x - drag.start.x, dy = w.y - drag.start.y;
+    if (!drag.moved && Math.hypot(dx, dy) * view.s < 3) return;
+    drag.moved = true;
+    const lim = settings.snapPx / view.s;
+    const byId = {}; design.pieces.forEach((p) => { byId[p.id] = p; });
+    if (drag.orig.length === 1) {
+      const o = drag.orig[0], p = byId[o.id], part = partMap[p.part];
+      const cand = Object.assign({}, p, { x: o.x + dx, y: o.y + dy, a: o.a, z: o.z });
+      const cd = pieceGeom(cand);
+      let best = null, bd = lim;
+      cd.conns.forEach((mc) => drag.targets.forEach((t) => { const dd = Math.hypot(mc.x - t.x, mc.y - t.y); if (dd < bd) { bd = dd; best = { mc, t }; } }));
+      if (best) {
+        const t = best.t;
+        if (best.mc.end === 0) Object.assign(p, { x: t.x, y: t.y, a: t.out, z: t.z });
+        else { Object.assign(p, G.solveEntry({ x: t.x, y: t.y, a: G.norm(t.out + 180) }, G.exitLocal(part, p.dir, W(p.width)))); p.z = t.z - (part.rise || 0); }
+      } else Object.assign(p, { x: snapGrid(cand.x), y: snapGrid(cand.y), a: o.a, z: o.z });
+      p.x = round3(p.x); p.y = round3(p.y); p.a = round3(G.norm(p.a));
+    } else {
+      let best = null, bd = lim;
+      drag.movers.forEach((mc) => drag.targets.forEach((t) => {
+        if (G.angDiff(mc.out, t.out + 180) > 1) return;
+        const dd = Math.hypot(mc.x + dx - t.x, mc.y + dy - t.y); if (dd < bd) { bd = dd; best = { mc, t }; }
+      }));
+      if (best) { dx = best.t.x - best.mc.x; dy = best.t.y - best.mc.y; }
+      else if (settings.snapToGrid) { const g = settings.gridSize; dx = Math.round(dx / g) * g; dy = Math.round(dy / g) * g; }
+      drag.orig.forEach((o) => { const p = byId[o.id]; p.x = round3(o.x + dx); p.y = round3(o.y + dy); });
+    }
+    derived = derive(); render(); refreshStats();
+  }
+  canvas.addEventListener('pointerup', (e) => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    if (d.type === 'place') placeGhost();
+    else if (d.type === 'move' && d.moved) { if (snap() !== d.before) { pushUndo(d.before); afterChange(); } }
+    else if (d.type === 'band') refresh();
+    canvas.style.cursor = ui.tool === 'place' ? 'crosshair' : 'default';
+    if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    updateGhost();
+  });
+  canvas.addEventListener('pointerleave', () => { pointerOnCanvas = false; if (!drag) { ghost = null; hoverPid = null; render(); } });
+  canvas.addEventListener('dblclick', (e) => { if (ui.tool !== 'select') return; const h = hitPiece(eventWorld(e)); if (h) { selection = chainOf(h); refresh(); } });
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    if (settings.wheel === 'zoom' || e.ctrlKey || e.metaKey) zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)));
+    else { view.ox -= e.deltaX; view.oy -= e.deltaY; render(); }
+  }, { passive: false });
+  new ResizeObserver(() => render()).observe(canvas);
+
+  /* ---------- keyboard ---------- */
+  window.addEventListener('keydown', (e) => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'select' || tag === 'textarea' || e.target.isContentEditable) { if (e.key === 'Enter' && e.target.id === 'trackTitle') e.target.blur(); return; }
+    if (!$('#modalBackdrop').hidden) { if (e.key === 'Escape') closeModal(); return; }
+    const mod = e.ctrlKey || e.metaKey, k = e.key;
+    if (mod && k.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+    if (mod && k.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
+    if (mod && k.toLowerCase() === 's') { e.preventDefault(); saveToLibrary(); return; }
+    if (mod && k.toLowerCase() === 'o') { e.preventDefault(); openLibrary(); return; }
+    if (mod && k.toLowerCase() === 'e') { e.preventDefault(); exportPng(); return; }
+    if (mod && k.toLowerCase() === 'a') { e.preventDefault(); setTool('select'); selection = new Set(design.pieces.map((p) => p.id)); refresh(); return; }
+    if (mod) return;
+    switch (k) {
+      case 'ArrowUp': e.preventDefault(); cycle('curve', 1); break;
+      case 'ArrowDown': e.preventDefault(); cycle('curve', -1); break;
+      case 'ArrowRight': e.preventDefault(); cycle('straight', 1); break;
+      case 'ArrowLeft': e.preventDefault(); cycle('straight', -1); break;
+      case 'r': case 'R': rotateSelection(e.shiftKey ? -1 : 1); break;
+      case 'f': case 'F': flip(); break;
+      case 'w': case 'W': setWidth(ui.width === 'single' ? 'double' : 'single'); break;
+      case 'v': case 'V': setTool('select'); break;
+      case 'p': case 'P': setTool('place'); break;
+      case 'Enter': e.preventDefault(); if (ui.tool !== 'place') setTool('place'); appendAtActiveEnd(); break;
+      case 'Delete': case 'Backspace': e.preventDefault(); deleteSelection(); break;
+      case 'Escape': if (selection.size) { selection.clear(); refresh(); } else if (ui.tool === 'place') setTool('select'); break;
+      case ' ': if (!spaceDown) { spaceDown = true; canvas.style.cursor = 'grab'; } e.preventDefault(); break;
+      case '0': fitView(); break;
+      case '9': fitToTrack(); break;
+      case '+': case '=': { const r = canvas.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.25); break; }
+      case '-': case '_': { const r = canvas.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 0.8); break; }
+      case '?': showHelp(); break;
+      default: return;
+    }
+  });
+  window.addEventListener('keyup', (e) => { if (e.key === ' ') { spaceDown = false; canvas.style.cursor = ui.tool === 'place' ? 'crosshair' : 'default'; } });
+  function fitToTrack() {
+    if (!derived.pieces.length) return fitView();
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    derived.pieces.forEach((d) => { x0 = Math.min(x0, d.bbox.x0); y0 = Math.min(y0, d.bbox.y0); x1 = Math.max(x1, d.bbox.x1); y1 = Math.max(y1, d.bbox.y1); });
+    fitView({ x0: x0 - 150, y0: y0 - 150, x1: x1 + 150, y1: y1 + 150 });
+  }
+
+  /* ---------- modal / toast ---------- */
+  let modalOnClose = null;
+  function modal({ title, html, node, buttons, small, onClose }) {
+    $('#modalTitle').textContent = title;
+    const body = $('#modalBody'); body.innerHTML = html || ''; if (node) body.appendChild(node);
+    $('.modal').classList.toggle('small', !!small);
+    const foot = $('#modalFoot'); foot.innerHTML = '';
+    (buttons || []).forEach((b) => {
+      const el = document.createElement('button'); el.className = 'sbtn' + (b.primary ? ' primary' : '') + (b.danger ? ' danger' : ''); el.textContent = b.label;
+      el.onclick = () => { if (!b.onClick || b.onClick() !== false) closeModal(); };
+      foot.appendChild(el);
+    });
+    modalOnClose = onClose || null;
+    $('#modalBackdrop').hidden = false;
+    return body;
+  }
+  function closeModal() { $('#modalBackdrop').hidden = true; $('#modalBody').innerHTML = ''; const f = modalOnClose; modalOnClose = null; if (f) f(); canvas.focus(); }
+  function ask(title, msg, ok, danger) { return new Promise((res) => modal({ title, html: `<p>${msg}</p>`, small: true, onClose: () => res(false), buttons: [{ label: 'Cancel' }, { label: ok, primary: !danger, danger, onClick: () => { modalOnClose = null; res(true); } }] })); }
+  $('#modalClose').onclick = closeModal;
+  $('#modalBackdrop').addEventListener('pointerdown', (e) => { if (e.target.id === 'modalBackdrop') closeModal(); });
+  let toastT = 0;
+  function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), ms || 2600); }
+
+  /* ---------- save / load / export ---------- */
+  function library() { return LS.get(KEYS.library, {}); }
+  function partsUsed() { const ids = new Set(); design.pieces.forEach((p) => { ids.add(p.part); const pp = partMap[p.part]; if (pp && pp.bomAs) ids.add(pp.bomAs); }); return [...ids].map((id) => partMap[id]).filter(Boolean); }
+  function exportDesign() { return Object.assign(clone(design), { app: 'TinyTMT track designer', geometry: { laneWidth: settings.laneWidth, wallThickness: settings.wallThickness, wallHeight: settings.wallHeight }, partsUsed: clone(partsUsed()) }); }
+  function saveToLibrary() {
+    const lib = library();
+    design.modified = new Date().toISOString();
+    let thumb = '';
+    try { thumb = BP.render(derived, design, settings, { mini: true, width: 320 }).toDataURL('image/jpeg', 0.75); } catch (e) { /* ignore */ }
+    lib[design.id] = { design: clone(design), thumb, savedAt: design.modified, stats: { length: derived.stats.length, pieces: derived.stats.pieces } };
+    if (LS.set(KEYS.library, lib)) { dirty = false; autosave(); refresh(); toast(`Saved “${design.title}” to this browser.`); }
+    else toast('Could not save — browser storage is full or unavailable. Use Export → Design file instead.', 4000);
+  }
+  async function loadDesign(d, opts) {
+    if (dirty && !(opts && opts.force) && design.pieces.length && !(await ask('Discard unsaved changes?', `“${esc(design.title)}” has unsaved changes.`, 'Discard', true))) return false;
+    (d.partsUsed || []).forEach((pp) => {
+      if (!partMap[pp.id]) { settings.customParts.push(Object.assign({}, pp, { source: 'custom' })); }
+    });
+    if (d.partsUsed && d.partsUsed.some((pp) => !P.DEFAULT_PARTS.find((q) => q.id === pp.id))) { LS.set(KEYS.settings, settings); buildParts(); buildPalette(); }
+    design = { format: 'tinytmt-design', version: 1, id: d.id || uid(), title: d.title || NAMES.randomTitle(), created: d.created || new Date().toISOString(), modified: d.modified || new Date().toISOString(), pieces: (d.pieces || []).map((p) => ({ id: p.id || uid(), part: p.part, x: +p.x || 0, y: +p.y || 0, a: +p.a || 0, z: +p.z || 0, dir: p.dir === 'L' ? 'L' : 'R', width: p.width === 'double' ? 'double' : 'single' })) };
+    undoStack = []; redoStack = []; selection.clear(); activeEnd = null; dirty = !!(opts && opts.dirty);
+    syncControls(); refresh(); autosave();
+    if (design.pieces.length) { const last = design.pieces[design.pieces.length - 1]; activeEnd = { pid: last.id, end: 1 }; }
+    render();
+    return true;
+  }
+  async function newTrack() {
+    if (dirty && design.pieces.length && !(await ask('Start a new design?', 'Unsaved changes to the current design will be lost.', 'Start new', true))) return;
+    await loadDesign(newDesign(), { force: true }); fitView(); toast(`New track: “${design.title}”`);
+  }
+  function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+  const slug = (s) => (s || 'track').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'track';
+  function exportJson() { download(`${slug(design.title)}.tinytmt.json`, new Blob([JSON.stringify(exportDesign(), null, 2)], { type: 'application/json' })); }
+  function bomCsv() {
+    const rows = [['Qty', 'Part', 'Part ID', 'Width', 'Left', 'Right', 'g each', 'g total', 'min each', 'min total', 'Source']];
+    derived.bom.rows.forEach((r) => rows.push([r.qty, r.name, r.printId, r.width, r.L || '', r.R || '', r.gramsEach.toFixed(1), r.gramsTotal.toFixed(1), r.minutesEach.toFixed(0), r.minutesTotal.toFixed(0), (P.SOURCES[r.source] || {}).url || '']));
+    rows.push([]); rows.push(['Track', design.title]); rows.push(['Length (m)', (derived.stats.length / 1000).toFixed(3)]); rows.push(['Total g', derived.stats.grams.toFixed(0)]); rows.push(['Total print min', derived.stats.minutes.toFixed(0)]);
+    return rows.map((r) => r.map((c) => (/[",\n]/.test(String(c)) ? `"${String(c).replace(/"/g, '""')}"` : c)).join(',')).join('\n');
+  }
+  function exportCsv() { download(`${slug(design.title)}-bom.csv`, new Blob([bomCsv()], { type: 'text/csv' })); }
+  function exportPng() {
+    const cv = BP.render(derived, design, settings, {});
+    cv.toBlob((b) => { download(`${slug(design.title)}-blueprint.png`, b); toast('Blueprint PNG downloaded.'); }, 'image/png');
+  }
+  function copyBom() {
+    const txt = `${design.title}\n` + derived.bom.rows.map((r) => `${r.qty} × ${r.name}${r.width === 'double' ? ' (double)' : ''} — ${Math.round(r.gramsTotal)} g`).join('\n') + `\nTotal: ${fmtG(derived.stats.grams)}, ${BP.fmtTime(derived.stats.minutes)}`;
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('BoM copied.'), () => toast('Clipboard unavailable.'));
+  }
+  async function importFile(file) {
+    try {
+      const d = JSON.parse(await file.text());
+      if (!d || !Array.isArray(d.pieces)) throw new Error('not a design');
+      if (await loadDesign(d, { dirty: true })) { fitToTrack(); toast(`Imported “${design.title}”.`); }
+    } catch (e) { toast('That file is not a TinyTMT design (.json).', 3500); }
+  }
+  function openLibrary() {
+    const lib = library(), entries = Object.values(lib).sort((a, b) => (a.savedAt < b.savedAt ? 1 : -1));
+    const node = document.createElement('div');
+    node.innerHTML = `<div class="row-btns" style="margin:0 0 14px"><button class="sbtn primary" data-l="import">Import design file…</button><span class="note" style="align-self:center">Designs are stored in this browser only. Export files to back them up or share.</span></div>` +
+      ((window.TinyTMTSamples || []).length ? `<h3 style="font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.5px;color:#667085">Sample tracks</h3><div class="lib-grid" style="margin-bottom:18px">${window.TinyTMTSamples.map((sm, i) => `<div class="lib-card"><div class="meta"><strong>${esc(sm.title)}</strong>${esc(sm.blurb || '')}<br>${sm.pieces.length} pieces${sm.pieces[0] && sm.pieces[0].width === 'double' ? ' · double width' : ''}</div><div class="row-btns"><button class="sbtn primary" data-sample="${i}">Open sample</button></div></div>`).join('')}</div><h3 style="font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.5px;color:#667085">Your saved designs</h3>` : '') +
+      (entries.length ? `<div class="lib-grid">${entries.map((en) => `<div class="lib-card" data-id="${en.design.id}">${en.thumb ? `<img src="${en.thumb}" alt="">` : '<img alt="">'}
+        <div class="meta"><strong>${esc(en.design.title)}</strong>${new Date(en.savedAt).toLocaleString()}<br>${en.stats ? `${en.stats.pieces} pieces · ${fmtLen(en.stats.length)}` : ''}</div>
+        <div class="row-btns"><button class="sbtn primary" data-l="open">Open</button><button class="sbtn" data-l="dup">Duplicate</button><button class="sbtn" data-l="dl" title="Download .json">⬇</button><button class="sbtn danger" data-l="del">Delete</button></div></div>`).join('')}</div>`
+        : '<div class="empty">No saved designs yet. Press <kbd>Ctrl S</kbd> to save the current one.</div>');
+    node.addEventListener('click', async (e) => {
+      const sb = e.target.closest('[data-sample]');
+      if (sb) { const d = clone(window.TinyTMTSamples[+sb.dataset.sample]); d.id = uid(); delete d.blurb; closeModal(); if (await loadDesign(d, { dirty: true })) { fitToTrack(); toast(`Opened sample “${design.title}” — save it to keep your changes.`); } return; }
+      const b = e.target.closest('[data-l]'); if (!b) return;
+      if (b.dataset.l === 'import') { closeModal(); $('#fileInput').click(); return; }
+      const id = b.closest('.lib-card').dataset.id, en = library()[id]; if (!en) return;
+      if (b.dataset.l === 'open') { closeModal(); if (await loadDesign(en.design)) { fitToTrack(); toast(`Opened “${design.title}”.`); } }
+      if (b.dataset.l === 'dup') { const d = clone(en.design); d.id = uid(); d.title = d.title + ' (copy)'; closeModal(); if (await loadDesign(d, { dirty: true })) fitToTrack(); }
+      if (b.dataset.l === 'dl') download(`${slug(en.design.title)}.tinytmt.json`, new Blob([JSON.stringify(en.design, null, 2)], { type: 'application/json' }));
+      if (b.dataset.l === 'del') {
+        if (b.dataset.confirm) { const l = library(); delete l[id]; LS.set(KEYS.library, l); b.closest('.lib-card').remove(); toast('Deleted.'); }
+        else { b.dataset.confirm = '1'; b.textContent = 'Sure?'; }
+      }
+    });
+    modal({ title: 'Saved designs', node });
+  }
+
+  /* ---------- settings ---------- */
+  const FIELDS = {
+    General: [
+      ['workspaceW', 'Workspace width', 'mm'], ['workspaceH', 'Workspace depth', 'mm'], ['overflowPct', 'Overflow area', '% extra around workspace'],
+      ['gridSize', 'Grid size', 'mm'], ['majorEvery', 'Major grid every', 'cells'], ['snapToGrid', 'Snap to grid', 'bool'],
+      ['snapPx', 'Snap distance', 'screen px'], ['rotationStep', 'Rotation step', 'deg', [15, 22.5, 30, 45, 90]],
+      ['wheel', 'Mouse wheel', '', ['zoom', 'pan']], ['showLabels', 'Show piece labels', 'bool'], ['showCenterline', 'Show centre line', 'bool']
+    ],
+    Track: [
+      ['laneWidth', 'Lane width', 'mm (Tamiya: 115)'], ['wallThickness', 'Wall thickness', 'mm'], ['wallHeight', 'Wall height', 'mm (Tamiya: 50)'],
+      ['floorThickness', 'Floor thickness', 'mm'], ['defaultWidth', 'Default width', '', ['single', 'double']],
+      ['defaultStraight', 'Default straight', '', 'straights'], ['defaultCurve', 'Default curve', '', 'curves'], ['clearance', 'Pass-under clearance', 'mm between levels']
+    ],
+    Printing: [
+      ['density', 'Material density', 'g/cm³ (PETG ≈ 1.27)'], ['filamentDiameter', 'Filament diameter', 'mm'], ['solidity', 'Solidity factor', '0–1 (walls/infill)'],
+      ['jointVolume', 'Connector allowance', 'cm³ per piece'], ['gramsPerHour', 'Print throughput', 'g per hour'], ['overheadMin', 'Per-plate overhead', 'min (heat-up, purge)'],
+      ['supportBaseG', 'Ramp support base', 'g'], ['supportGPerMm', 'Ramp support per mm height', 'g/mm'], ['clipsPerJoint', 'Clips per joint', 'qty (0 = none)'],
+      ['clipGrams', 'Clip weight', 'g'], ['costPerKg', 'Filament cost', 'per kg (0 = hide)'], ['currency', 'Currency symbol', 'text']
+    ]
+  };
+  function openSettings() {
+    const work = clone(settings);
+    const node = document.createElement('div');
+    const tabs = [...Object.keys(FIELDS), 'Parts'];
+    node.innerHTML = `<div class="settings-tabs">${tabs.map((t, i) => `<button data-t="${t}" class="${i ? '' : 'on'}">${t}</button>`).join('')}</div><div id="setBody"></div>`;
+    const body = $('#setBody', node);
+    const straightsOpts = () => parts.filter((p) => p.type === 'straight' && p.group === 'straight').map((p) => [p.id, p.name]);
+    const curveOpts = () => parts.filter((p) => p.type === 'curve').map((p) => [p.id, p.name]);
+    function showTab(t) {
+      $$('.settings-tabs button', node).forEach((b) => b.classList.toggle('on', b.dataset.t === t));
+      if (t === 'Parts') return showParts();
+      body.innerHTML = `<div class="form-grid">${FIELDS[t].map(([k, label, unit, opt]) => {
+        if (unit === 'bool') return `<div class="field check"><input type="checkbox" id="f_${k}" ${work[k] ? 'checked' : ''}><label for="f_${k}">${label}</label></div>`;
+        if (opt) {
+          const list = opt === 'straights' ? straightsOpts() : opt === 'curves' ? curveOpts() : opt.map((v) => [v, v]);
+          return `<div class="field"><label for="f_${k}">${label}</label><select id="f_${k}">${list.map(([v, l]) => `<option value="${v}" ${String(work[k]) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${unit ? `<small>${unit}</small>` : ''}</div>`;
+        }
+        const type = unit === 'text' ? 'text' : 'number';
+        return `<div class="field"><label for="f_${k}">${label}</label><input id="f_${k}" type="${type}" step="any" value="${esc(work[k])}"><small>${unit}</small></div>`;
+      }).join('')}</div>`;
+      FIELDS[t].forEach(([k, , unit, opt]) => {
+        const el = $('#f_' + k, body);
+        el.onchange = () => { work[k] = unit === 'bool' ? el.checked : unit === 'text' || (opt && typeof opt === 'string') || k === 'wheel' || k === 'defaultWidth' ? el.value : parseFloat(el.value); };
+      });
+    }
+    function showParts() {
+      const all = [...P.DEFAULT_PARTS, ...work.customParts];
+      const ov = work.partOverrides;
+      const get = (p, k) => (ov[p.id] && k in ov[p.id] ? ov[p.id][k] : p[k]);
+      const set = (p, k, v) => { if (work.customParts.includes(p)) p[k] = v; else { ov[p.id] = ov[p.id] || {}; ov[p.id][k] = v; } };
+      body.innerHTML = `<p class="note">Show/hide pieces, choose which ones the arrow keys cycle through, and enter slicer weights/times for exact BoM numbers (single-width values; double width is scaled). Geometry edits apply to existing designs too.</p>
+        <table class="parts-table"><thead><tr><th>Show</th><th title="Arrow-key cycle">Cycle</th><th>Part</th><th>Length / IR</th><th>Angle</th><th>g</th><th>min</th><th></th></tr></thead><tbody>
+        ${all.map((p, i) => `<tr data-i="${i}"><td><input type="checkbox" data-k="show" ${get(p, 'hidden') ? '' : 'checked'}></td>
+          <td>${p.group === 'straight' ? `<input type="checkbox" data-k="cycleStraight" ${get(p, 'cycleStraight') ? 'checked' : ''} title="←/→">` : p.type === 'curve' ? `<input type="checkbox" data-k="cycleCurve" ${get(p, 'cycleCurve') ? 'checked' : ''} title="↑/↓">` : ''}</td>
+          <td>${esc(get(p, 'name'))}<br><span class="note">${p.id}${p.nominal ? ' · nominal' : ''}</span></td>
+          <td><input type="number" data-k="${p.type === 'curve' ? 'ir' : 'length'}" value="${get(p, p.type === 'curve' ? 'ir' : 'length')}"></td>
+          <td>${p.type === 'curve' ? `<input type="number" data-k="angle" value="${get(p, 'angle')}">` : p.rise ? `<span class="note">rise ${get(p, 'rise')}</span>` : ''}</td>
+          <td><input type="number" data-k="gramsOverride" placeholder="auto" value="${get(p, 'gramsOverride') || ''}"></td>
+          <td><input type="number" data-k="minutesOverride" placeholder="auto" value="${get(p, 'minutesOverride') || ''}"></td>
+          <td>${work.customParts.includes(p) ? '<button class="sbtn danger" data-del>✕</button>' : ''}</td></tr>`).join('')}
+        </tbody></table>
+        <h3 style="font-size:14px;margin:18px 0 8px">Add a custom piece</h3>
+        <div class="form-grid"><div class="field"><label>Type</label><select id="cpType"><option value="straight">Straight</option><option value="curve">Curve</option></select></div>
+        <div class="field"><label>Length / inner radius (mm)</label><input id="cpLen" type="number" value="180"></div>
+        <div class="field"><label>Angle (curves, °)</label><input id="cpAng" type="number" value="22.5"></div>
+        <div class="field"><label>Name</label><input id="cpName" type="text" placeholder="auto"></div></div>
+        <div class="row-btns"><button class="sbtn primary" id="cpAdd">Add piece</button><button class="sbtn danger" id="cpReset">Reset all part edits</button></div>`;
+      $$('tbody tr', body).forEach((tr) => {
+        const p = all[+tr.dataset.i];
+        $$('input', tr).forEach((inp) => (inp.onchange = () => {
+          const k = inp.dataset.k;
+          if (k === 'show') set(p, 'hidden', !inp.checked);
+          else if (inp.type === 'checkbox') set(p, k, inp.checked);
+          else { const v = parseFloat(inp.value); set(p, k, isFinite(v) && v > 0 ? v : (k.endsWith('Override') ? 0 : p[k])); }
+        }));
+        const del = $('[data-del]', tr); if (del) del.onclick = () => { work.customParts.splice(work.customParts.indexOf(p), 1); showParts(); };
+      });
+      $('#cpAdd', body).onclick = () => {
+        const type = $('#cpType', body).value, len = parseFloat($('#cpLen', body).value), ang = parseFloat($('#cpAng', body).value);
+        if (!(len > 0) || (type === 'curve' && !(ang > 0 && ang <= 180))) return toast('Enter a valid size.');
+        const id = type === 'curve' ? `X-C${ang}-R${len}` : `X-S${len}`;
+        if (all.some((p) => p.id === id)) return toast('That piece already exists.');
+        work.customParts.push(type === 'curve'
+          ? { id, name: $('#cpName', body).value || `Curve ${ang}° IR${len}`, type, group: 'curve', ir: len, angle: ang, style: 'smooth', source: 'custom', cycleCurve: true }
+          : { id, name: $('#cpName', body).value || `Straight ${len}`, type, group: 'straight', length: len, source: 'custom', cycleStraight: true });
+        showParts();
+      };
+      $('#cpReset', body).onclick = () => { work.partOverrides = {}; showParts(); };
+    }
+    node.addEventListener('click', (e) => { const b = e.target.closest('.settings-tabs button'); if (b) showTab(b.dataset.t); });
+    showTab('General');
+    modal({
+      title: 'Settings', node, buttons: [
+        { label: 'Reset to defaults', danger: true, onClick: () => { Object.assign(work, clone(DEFAULT_SETTINGS)); showTab('General'); toast('Defaults restored — press Save to apply.'); return false; } },
+        { label: 'Cancel' },
+        { label: 'Save', primary: true, onClick: () => applySettings(work) }
+      ]
+    });
+  }
+  function applySettings(work) {
+    ['workspaceW', 'workspaceH', 'gridSize', 'laneWidth', 'wallHeight', 'density', 'filamentDiameter', 'gramsPerHour'].forEach((k) => { if (!(work[k] > 0)) work[k] = DEFAULT_SETTINGS[k]; });
+    work.solidity = Math.min(1, Math.max(0.05, work.solidity || DEFAULT_SETTINGS.solidity));
+    settings = work; LS.set(KEYS.settings, settings);
+    buildParts(); buildPalette(); refresh(); fitView(); toast('Settings saved.');
+  }
+
+  function showHelp() {
+    const sc = [
+      ['Place tool / Select tool', 'P / V'], ['Cycle curves', '↑ ↓'], ['Cycle straight lengths', '← →'], ['Rotate (ghost or selection)', 'R / Shift R'],
+      ['Flip curve direction', 'F'], ['Toggle single / double width', 'W'], ['Add piece at active end', 'Enter'], ['Delete selection / last piece', 'Del / ⌫'],
+      ['Undo / Redo', 'Ctrl Z / Ctrl ⇧ Z'], ['Save / Open', 'Ctrl S / Ctrl O'], ['Blueprint PNG', 'Ctrl E'], ['Select all', 'Ctrl A'],
+      ['Pan', 'Space-drag · right/middle drag'], ['Zoom', 'Wheel · + / −'], ['Fit workspace / fit track', '0 / 9'], ['Select connected chain', 'Double-click']
+    ];
+    modal({
+      title: 'TinyTMT track designer — how to', html: `
+      <p><b>Build a course:</b> pick a piece in the palette (or use the arrow keys), then click on the grid. Move the mouse near a green open end and the piece snaps onto it. Press <kbd>Enter</kbd> to keep adding the selected piece to the end you last built — the fastest way to lay a whole track.</p>
+      <p><b>Edit:</b> switch to Select (<kbd>V</kbd>), click a piece, and use the arrow keys to swap it for another size — the rest of the chain follows along. Drag pieces to move them; they snap to nearby open ends.</p>
+      <div class="shortcuts">${sc.map(([a, b]) => `<div><span>${a}</span><kbd>${b}</kbd></div>`).join('')}</div>
+      <p class="note" style="margin-top:14px">Pieces follow the Tamiya Mini 4WD format (115 mm lane, 50 mm walls) using rucdoc's single-lane <a href="${P.SOURCES.ramp.url}" target="_blank" rel="noopener">modular ramp set</a> and <a href="${P.SOURCES.curve.url}" target="_blank" rel="noopener">curve track pack</a>. Dimensions marked nominal should be checked against the STLs. Everything runs in your browser and works offline; designs are stored locally.</p>
+      <p class="note">TinyTMT is an outreach project by SalvageGarden Makerspace — a mini, motorised take on the open-source Toddler Mobility Trainer wheelchair. Open source under the MIT licence.</p>`,
+      buttons: [{ label: 'Got it', primary: true }]
+    });
+  }
+
+  /* ---------- add-ons ---------- */
+  TinyTMT.api = {
+    getDesign: () => clone(design), getParts: () => clone(parts), getSettings: () => clone(settings), geom: G,
+    getDerived: () => ({ pieces: derived.pieces.map((d) => ({ id: d.p.id, part: d.part.id, partDef: clone(d.part), width: d.p.width, W: d.W, dir: d.p.dir, pose: { x: d.p.x, y: d.p.y, a: d.p.a }, z: d.z0, zExit: d.z1, outline: d.outline.map((q) => ({ x: q.x, y: q.y })), center: d.center.map((q) => ({ x: q.x, y: q.y })), length: d.length })), stats: clone(derived.stats), bom: clone(derived.bom.rows.map((r) => Object.assign({}, r, { part: undefined }))), zMin: derived.zMin, zMax: derived.zMax, workspace: derived.workspace }),
+    on: (ev, fn) => TinyTMT._on(ev, fn), modal: (o) => modal(o), toast: (m) => toast(m)
+  };
+  function renderAddon(a) {
+    const b = document.createElement('button'); b.className = 'btn addon-btn'; b.title = a.label;
+    b.innerHTML = `${a.icon ? `<span>${a.icon}</span>` : ''}<span>${esc(a.label)}</span>${a.badge ? `<span class="pill">${esc(a.badge)}</span>` : ''}`;
+    b.onclick = () => { try { a.run(TinyTMT.api); } catch (e) { console.error(e); toast('Add-on error: ' + e.message); } };
+    $('#addonSlot').appendChild(b);
+    if (typeof a.init === 'function') a.init(TinyTMT.api);
+  }
+  TinyTMT.addons.list.forEach(renderAddon);
+  TinyTMT._on('addon-registered', (a) => { if (TinyTMT.api) { const init = a.init; a.init = null; renderAddon(a); a.init = init; } });
+
+  /* ---------- wiring ---------- */
+  $('#trackTitle').addEventListener('input', (e) => { design.title = e.target.value || 'Untitled track'; dirty = true; $('#dirtyDot').classList.add('on'); autosave(); });
+  $('#trackTitle').addEventListener('blur', () => { if (!design.title.trim()) { design.title = NAMES.randomTitle(); syncControls(); } refreshSide(); });
+  $('#btnRerollTitle').onclick = () => { design.title = NAMES.randomTitle(); dirty = true; syncControls(); refresh(); autosave(); };
+  $('#btnNew').onclick = newTrack;
+  $('#btnOpen').onclick = openLibrary;
+  $('#btnSave').onclick = saveToLibrary;
+  $('#btnSettings').onclick = openSettings;
+  $('#btnHelp').onclick = showHelp;
+  const exportMenu = $('#exportMenu');
+  $('#btnExport').onclick = (e) => { e.stopPropagation(); exportMenu.hidden = !exportMenu.hidden; $('#btnExport').setAttribute('aria-expanded', String(!exportMenu.hidden)); };
+  document.addEventListener('click', () => { exportMenu.hidden = true; });
+  exportMenu.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-export]'); if (!b) return;
+    ({ png: exportPng, json: exportJson, csv: exportCsv, import: () => $('#fileInput').click() })[b.dataset.export]();
+  });
+  $('#fileInput').onchange = (e) => { const f = e.target.files[0]; if (f) importFile(f); e.target.value = ''; };
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) importFile(f); });
+  $$('[data-width]').forEach((b) => (b.onclick = () => setWidth(b.dataset.width)));
+  $$('[data-dir]').forEach((b) => (b.onclick = () => { if (selection.size) { const want = b.dataset.dir; const curves = [...selection].filter((id) => derived.byId[id] && derived.byId[id].part.type === 'curve' && derived.byId[id].p.dir !== want); if (curves.length === 1) replacePiece(curves[0], { dir: want }); } ui.dir = b.dataset.dir; saveUi(); syncControls(); updateGhost(); }));
+  $$('.tool[data-tool]').forEach((b) => (b.onclick = () => setTool(b.dataset.tool)));
+  $('#tRotate').onclick = () => rotateSelection(1);
+  $('#tFlip').onclick = flip;
+  $('#tDelete').onclick = deleteSelection;
+  $('#tUndo').onclick = undo; $('#tRedo').onclick = redo;
+  $('#tZoomIn').onclick = () => { const r = canvas.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.25); };
+  $('#tZoomOut').onclick = () => { const r = canvas.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 0.8); };
+  $('#tZoomFit').onclick = () => fitView();
+  $('#partSearch').addEventListener('input', buildPalette);
+  $$('.tabs [data-tab]').forEach((b) => (b.onclick = () => { $$('.tabs [data-tab]').forEach((x) => x.classList.toggle('on', x === b)); $('#tab-bom').hidden = b.dataset.tab !== 'bom'; $('#tab-inspect').hidden = b.dataset.tab !== 'inspect'; }));
+  $('.side').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    ({ csv: exportCsv, copybom: copyBom, png: exportPng, rotate: () => rotateSelection(1), flip, delete: deleteSelection, chain: () => { selection = chainOf([...selection][0]); refresh(); } })[b.dataset.act]();
+  });
+  window.addEventListener('beforeunload', () => LS.set(KEYS.current, { design, dirty }));
+
+  /* ---------- boot ---------- */
+  buildParts();
+  const saved = LS.get(KEYS.current, null);
+  design = saved && saved.design && Array.isArray(saved.design.pieces) ? saved.design : newDesign();
+  dirty = !!(saved && saved.dirty);
+  derived = derive();
+  buildPalette(); syncControls(); setTool(ui.tool === 'select' ? 'select' : 'place');
+  requestAnimationFrame(() => { design.pieces.length ? fitToTrack() : fitView(); refresh(); if (design.pieces.length) activeEnd = { pid: design.pieces[design.pieces.length - 1].id, end: 1 }; render(); });
+  if (!LS.get('tinytmt.seenHelp', false)) { LS.set('tinytmt.seenHelp', true); setTimeout(showHelp, 400); }
+  window.__tinytmt = { get design() { return design; }, get derived() { return derived; }, appendAtActiveEnd, setActivePart, cycle, undo, redo, exportPng, saveToLibrary, view, fitView, toWorld, placeGhost, updateGhost, setTool, get ghost() { return ghost; } };
+})();
+
+</script>
+  <script>
+/*
+ * Placeholder for the planned "View in 3D" add-on.
+ * Replace this file (or add a new one) with a real viewer, e.g. three.js extruding
+ * api.getDerived().pieces[i].outline at each piece's elevation (z / zExit).
+ */
+TinyTMT.addons.register({
+  id: 'view3d',
+  label: 'View in 3D',
+  icon: '🧊',
+  badge: 'Soon',
+  run(api) {
+    const d = api.getDerived();
+    api.modal({
+      title: 'View in 3D — coming soon',
+      html: `
+        <p>A 3D preview is planned as an add-on. The hook is already in place: any script that calls
+        <code>TinyTMT.addons.register({...})</code> gets a toolbar button and read access to the design.</p>
+        <p>This design currently has <b>${d.pieces.length}</b> pieces, with elevations from
+        <b>${Math.round(d.zMin)} mm</b> to <b>${Math.round(d.zMax)} mm</b>.</p>
+        <p class="note">See <code>js/addons.js</code> for the API and <code>addons/view3d-placeholder.js</code> for this stub.</p>`,
+      buttons: [{ label: 'OK', primary: true }]
+    });
+  }
+});
+
+</script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

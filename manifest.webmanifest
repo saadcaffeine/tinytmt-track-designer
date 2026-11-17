@@ -1,0 +1,11 @@
+{
+  "name": "TinyTMT track designer by SalvageGarden Makerspace",
+  "short_name": "TinyTMT",
+  "description": "Design Mini TMT obstacle courses from 3D-printable Mini 4WD-format track pieces.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f5f9",
+  "theme_color": "#14213d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
