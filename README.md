@@ -13,6 +13,7 @@ It's plain HTML/CSS/JS with no build step and no dependencies, and it works offl
 
 - A 1.5 m × 2 m workspace grid with a 50 % overflow area around it. Sizes are configurable.
 - Click to place, or drag pieces from the palette. Pieces snap to the grid or to the nearest open track end.
+- **Colour-coded families:** straights, each curve radius and ramps each have their own colour in the palette, on the canvas and in the BoM. Curves are grouped by inner radius, widest turn (90°) first.
 - **Arrow keys:** ↑/↓ cycle through curves and ←/→ through straight lengths. The default pieces are the 250 mm straight and the 45° curve.
 - **Enter** adds the current piece to the end you last built, so you can lay a whole track from the keyboard.
 - Select a piece and press an arrow key to swap it for another size. The rest of the chain moves to fit.
