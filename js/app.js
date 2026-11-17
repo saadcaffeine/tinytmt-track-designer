@@ -28,6 +28,7 @@
     defaultWidth: 'single', defaultStraight: P.DEFAULT_STRAIGHT, defaultCurve: P.DEFAULT_CURVE, clearance: 55,
     density: 1.27, filamentDiameter: 1.75, solidity: 0.7, jointVolume: 4, gramsPerHour: 18, overheadMin: 6,
     supportBaseG: 12, supportGPerMm: 0.35, clipsPerJoint: 0, clipGrams: 2, costPerKg: 0, currency: '$',
+    autoMaxPieces: 8, autoMaxCurves: 6, autoCurves: 'design', autoAdapters: true, autoTimeLimit: 4,
     partOverrides: {}, customParts: []
   };
 
@@ -265,6 +266,7 @@
   }
   function pushUndo(before) { undoStack.push(before); if (undoStack.length > 200) undoStack.shift(); redoStack = []; }
   function afterChange() {
+    if (suggest) suggest = null;
     dirty = true; design.modified = new Date().toISOString();
     refresh();
     autosave();
@@ -529,6 +531,7 @@
       }
     }
     if (ghost) drawGhost(ghost.d);
+    if (suggest) drawSuggestion(suggest.options[suggest.idx].ds);
     if (drag && drag.type === 'band') {
       const a = drag.start, b = drag.cur;
       ctx.fillStyle = 'rgba(47,124,246,.08)'; ctx.strokeStyle = COL.sel; ctx.lineWidth = px;
@@ -615,6 +618,7 @@
     render(); refreshStats(); refreshSide(); refreshHud();
     $('#dirtyDot').classList.toggle('on', dirty);
     $('#tUndo').disabled = !undoStack.length; $('#tRedo').disabled = !redoStack.length;
+    refreshAutoButton();
   }
   function fmtLen(mm) { return (mm / 1000).toFixed(2) + ' m'; }
   function fmtG(g) { return g >= 1000 ? (g / 1000).toFixed(2) + ' kg' : Math.round(g) + ' g'; }
@@ -635,6 +639,16 @@
   function refreshHud() {
     const p = partMap[ui.activePart];
     const hud = $('#hud');
+    if (solving) { hud.innerHTML = '<b>Auto loop</b> · searching for pieces that close the track…<br><kbd>Esc</kbd> cancel'; return; }
+    if (suggest) {
+      const o = suggest.options[suggest.idx], n = suggest.options.length;
+      const names = {};
+      o.pieces.forEach((pc) => { const pp = partMap[pc.part]; const k = shortLabel(pp, pc).replace(/[↰↱]/g, ''); names[k] = (names[k] || 0) + 1; });
+      hud.innerHTML = `<b>Auto loop</b> · option ${suggest.idx + 1} of ${n} · ${o.pieces.length} piece${o.pieces.length === 1 ? '' : 's'}${o.adapters ? ` incl. ${o.adapters} adapter${o.adapters === 1 ? '' : 's'}` : ''}${o.outside ? ` · ${o.outside} outside workspace` : ''}<br>` +
+        `${Object.entries(names).map(([k, v]) => `${v}× ${esc(k)}`).join(', ')}<br>` +
+        `${n > 1 ? '<kbd>←</kbd><kbd>→</kbd> other options · ' : ''}<kbd>Enter</kbd> add these pieces · <kbd>Esc</kbd> cancel`;
+      return;
+    }
     if (ui.tool === 'place') {
       hud.innerHTML = `Placing <b>${esc(p ? p.name : '?')}</b> · ${ui.width} · ${p && p.type === 'curve' ? (ui.dir === 'L' ? 'left' : 'right') + ' · ' : ''}${Math.round(ui.rotation)}°<br>` +
         `Click to place · <kbd>↑</kbd><kbd>↓</kbd> curves · <kbd>←</kbd><kbd>→</kbd> straights · <kbd>R</kbd> rotate · <kbd>F</kbd> flip · <kbd>Enter</kbd> add to end · <kbd>V</kbd> select`;
@@ -787,6 +801,7 @@
   function hitPiece(w) { for (let i = derived.pieces.length - 1; i >= 0; i--) if (localHit(derived.pieces[i], w.x, w.y, 0) >= 0) return derived.pieces[i].p.id; return null; }
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   canvas.addEventListener('pointerdown', (e) => {
+    if (suggest) cancelSuggest();
     canvas.focus();
     canvas.setPointerCapture(e.pointerId);
     const w = eventWorld(e), r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
@@ -886,6 +901,15 @@
     const tag = (e.target.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'select' || tag === 'textarea' || e.target.isContentEditable) { if (e.key === 'Enter' && e.target.id === 'trackTitle') e.target.blur(); return; }
     if (!$('#modalBackdrop').hidden) { if (e.key === 'Escape') closeModal(); return; }
+    if (solving && e.key === 'Escape') { if (window.TinyTMTSolver.solveAsync.cancel) window.TinyTMTSolver.solveAsync.cancel(); return; }
+    if (suggest) {
+      const k2 = e.key, n = suggest.options.length;
+      if (k2 === 'ArrowRight' || k2 === 'ArrowDown') { e.preventDefault(); suggest.idx = (suggest.idx + 1) % n; refreshHud(); render(); return; }
+      if (k2 === 'ArrowLeft' || k2 === 'ArrowUp') { e.preventDefault(); suggest.idx = (suggest.idx - 1 + n) % n; refreshHud(); render(); return; }
+      if (k2 === 'Enter') { e.preventDefault(); acceptSuggest(); return; }
+      if (k2 === 'Escape') { cancelSuggest(); return; }
+      if (!['Shift', 'Control', 'Meta', 'Alt'].includes(k2)) cancelSuggest();
+    }
     const mod = e.ctrlKey || e.metaKey, k = e.key;
     if (mod && k.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
     if (mod && k.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
@@ -903,6 +927,7 @@
       case 'f': case 'F': flip(); break;
       case 'w': case 'W': setWidth(ui.width === 'single' ? 'double' : 'single'); break;
       case 'v': case 'V': setTool('select'); break;
+      case 'l': case 'L': runAutoLoop(); break;
       case 'p': case 'P': setTool('place'); break;
       case 'Enter': e.preventDefault(); if (ui.tool !== 'place') setTool('place'); appendAtActiveEnd(); break;
       case 'Delete': case 'Backspace': e.preventDefault(); deleteSelection(); break;
@@ -922,6 +947,164 @@
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     derived.pieces.forEach((d) => { x0 = Math.min(x0, d.bbox.x0); y0 = Math.min(y0, d.bbox.y0); x1 = Math.max(x1, d.bbox.x1); y1 = Math.max(y1, d.bbox.y1); });
     fitView({ x0: x0 - 150, y0: y0 - 150, x1: x1 + 150, y1: y1 + 150 });
+  }
+
+  /* ---------- auto loop ---------- */
+  let suggest = null; // { options: [{pieces, ds, adapters, outside}], idx, st }
+  let solving = false;
+  function autoCurveDefs() {
+    const vis = visibleParts().filter((p) => p.type === 'curve' && p.style !== 'digital');
+    const def = partMap[settings.defaultCurve];
+    const used = new Set(design.pieces.map((p) => p.part));
+    let list;
+    if (settings.autoCurves === 'all') list = vis;
+    else if (settings.autoCurves === 'cycle') list = cycleList('curve').filter((p) => p.style !== 'digital');
+    else if (settings.autoCurves === 'defaultIR') list = vis.filter((p) => def && p.ir === def.ir);
+    else {
+      const irs = new Set(design.pieces.map((p) => partMap[p.part]).filter((p) => p && p.type === 'curve').map((p) => p.ir));
+      if (def) irs.add(def.ir);
+      list = vis.filter((p) => irs.has(p.ir));
+    }
+    return list.map((p) => ({ id: p.id, ir: p.ir, angle: p.angle, pref: used.has(p.id) || p.id === settings.defaultCurve }));
+  }
+  function autoStraightDefs() {
+    return visibleParts().filter((p) => p.type === 'straight' && !p.rise && !p.obstacle && (p.group === 'straight' || (settings.autoAdapters && p.group === 'adapter')))
+      .map((p) => ({ id: p.id, length: p.length, adapter: p.group === 'adapter' }));
+  }
+  function effectiveMaxCurves(nTypes) {
+    let M = settings.autoMaxCurves; const b = Math.max(2, 2 * nTypes);
+    while (M > 2 && Math.pow(b, M) > 4e6) M--;
+    return M;
+  }
+  /** Picks the two loose ends to join and decides, cheaply, whether a closure is even possible. */
+  function autoLoopEnds() {
+    if (!design.pieces.length) return { reason: 'Place some track first.' };
+    if (!derived.openConnectors.length) return { reason: 'The track is already a closed loop.' };
+    const comps = [], seen = new Set();
+    derived.pieces.forEach((d) => { if (seen.has(d.p.id)) return; const c = chainOf(d.p.id); c.forEach((id) => seen.add(id)); comps.push(c); });
+    const opensOf = (comp) => derived.openConnectors.filter((c) => comp.has(c.pid));
+    const ac = activeConn();
+    let ends = null;
+    if (ac) { const comp = comps.find((c) => c.has(ac.pid)); if (comp) { const o = opensOf(comp); if (o.length === 2) ends = o; } }
+    if (!ends) { const two = comps.map(opensOf).filter((o) => o.length === 2); if (two.length === 1 || (two.length && comps.length === 1)) ends = two[0]; else if (two.length) ends = two.sort((x, y) => y.length - x.length)[0]; }
+    if (!ends) return { reason: comps.length > 1 ? 'Auto loop joins the two loose ends of one run of track — connect or remove the separate pieces first.' : 'Auto loop needs exactly two loose ends.' };
+    let [a, b] = ends;
+    if (ac && b.pid === ac.pid && b.end === ac.end) [a, b] = [b, a];
+    else if (!(ac && a.pid === ac.pid && a.end === ac.end) && a.end === 0 && b.end === 1) [a, b] = [b, a];
+    if (a.width !== b.width) return { reason: 'The two loose ends are different widths.' };
+    if (Math.abs(a.z - b.z) > 0.5) return { reason: `The loose ends are at different heights (${Math.round(a.z)} mm and ${Math.round(b.z)} mm) — auto loop doesn't add ramps.` };
+    const curves = autoCurveDefs(), straights = autoStraightDefs();
+    const tw = W(a.width), startH = a.out, targetH = G.norm(b.out + 180);
+    const diff = G.norm(targetH - startH);
+    let turn = Math.min(diff, 360 - diff);
+    // Same heading but the target is behind the start: the track has to come all the way round (360°).
+    const ux = Math.cos(startH * G.D2R), uy = Math.sin(startH * G.D2R);
+    if (turn < 1e-6 && ((b.x - a.x) * ux + (b.y - a.y) * uy) < -1) turn = 360;
+    if (turn > 1e-6 && !curves.length) return { reason: 'No curves are available to the solver — check Settings → Auto loop.' };
+    const maxAng = curves.reduce((m, c) => Math.max(m, c.angle), 0);
+    const nC = turn < 1e-6 ? 0 : Math.ceil(turn / maxAng - 1e-9);
+    const budget = settings.autoMaxPieces, maxC = effectiveMaxCurves(curves.length);
+    if (nC > Math.min(budget, maxC)) return { reason: `The loose ends need at least ${nC} curves to line up — more than the ${Math.min(budget, maxC)} allowed.` };
+    const chordMax = curves.reduce((m, c) => Math.max(m, 2 * (c.ir + tw / 2) * Math.sin(c.angle * G.D2R / 2)), 0);
+    const Lmax = straights.reduce((m, s) => Math.max(m, s.length), 0);
+    const reach = nC * chordMax + (budget - nC) * Math.max(Lmax, chordMax);
+    const dist = Math.hypot(b.x - a.x, b.y - a.y);
+    if (dist > reach + 1) return { tooFar: true, reason: `The loose ends are ${(dist / 1000).toFixed(2)} m apart — further than ${budget} added pieces can reach (about ${(reach / 1000).toFixed(2)} m). Build closer, or raise the limit in Settings → Auto loop.` };
+    return { a, b, dist, curves, straights, startH, targetH, W: tw, maxCurves: maxC, Lmax };
+  }
+  function refreshAutoButton() {
+    const btn = $('#tAutoLoop'); if (!btn) return;
+    const st = autoLoopEnds();
+    btn.classList.toggle('is-disabled', !!st.reason);
+    btn.setAttribute('aria-disabled', String(!!st.reason));
+    btn.title = st.reason ? `Auto loop unavailable — ${st.reason}` : `Auto loop (L) — find pieces that join the two loose ends (${(st.dist / 1000).toFixed(2)} m apart)`;
+  }
+  function buildChain(items, a, width) {
+    let pose = { x: a.x, y: a.y, a: a.out };
+    const pieces = [], ds = [];
+    for (const it of items) {
+      if (!partMap[it.id]) return null;
+      const p = { id: uid(), part: it.id, x: round3(pose.x), y: round3(pose.y), a: round3(G.norm(pose.a)), z: a.z, dir: it.dir < 0 ? 'L' : 'R', width };
+      const d = pieceGeom(p); pieces.push(p); ds.push(d);
+      pose = { x: d.conns[1].x, y: d.conns[1].y, a: d.conns[1].out };
+    }
+    return { pieces, ds, end: pose };
+  }
+  function validateChain(built, st) {
+    const e = built.end;
+    if (Math.hypot(e.x - st.b.x, e.y - st.b.y) > 1.4 || G.angDiff(e.a, st.targetH) > 0.5) return { ok: false };
+    const ds = built.ds;
+    const ws = derived.workspace, ov = derived.overflow;
+    const inside = (r, q) => q.x >= r.x0 - 0.5 && q.x <= r.x1 + 0.5 && q.y >= r.y0 - 0.5 && q.y <= r.y1 + 0.5;
+    let outside = 0;
+    for (const d of ds) { if (!d.outline.every((q) => inside(ov, q))) return { ok: false }; if (!d.outline.every((q) => inside(ws, q))) outside++; }
+    for (let i = 0; i < ds.length; i++) {
+      for (const o of derived.pieces) {
+        if ((i === 0 && o.p.id === st.a.pid) || (i === ds.length - 1 && o.p.id === st.b.pid)) continue;
+        if (overlaps(ds[i], o)) return { ok: false };
+      }
+      for (let j = i + 2; j < ds.length; j++) if (overlaps(ds[i], ds[j])) return { ok: false };
+    }
+    return { ok: true, outside };
+  }
+  async function runAutoLoop() {
+    if (solving) return;
+    const st = autoLoopEnds();
+    if (st.reason) { toast(st.reason, 4000); return; }
+    cancelSuggest();
+    solving = true; $('#tAutoLoop').classList.add('busy'); refreshHud();
+    const before = snap();
+    const params = {
+      start: { x: st.a.x, y: st.a.y, a: st.a.out }, target: { x: st.b.x, y: st.b.y, a: st.targetH },
+      curves: st.curves, straights: st.straights, W: st.W, maxPieces: settings.autoMaxPieces, maxCurves: st.maxCurves,
+      maxGap: settings.autoMaxPieces * st.Lmax, tol: 1.2, timeLimit: settings.autoTimeLimit * 1000, maxResults: 150
+    };
+    let out;
+    try { out = await window.TinyTMTSolver.solveAsync(params); }
+    catch (err) { solving = false; $('#tAutoLoop').classList.remove('busy'); refreshHud(); if (err.message !== 'cancelled') toast('Auto loop stopped: ' + err.message); else toast('Auto loop cancelled.'); return; }
+    solving = false; $('#tAutoLoop').classList.remove('busy');
+    if (snap() !== before) { refreshHud(); toast('The design changed while searching — press Auto loop again.'); return; }
+    const opts = [];
+    for (const r of out.results) {
+      const built = buildChain(r.items, st.a, st.a.width);
+      if (!built) continue;
+      const v = validateChain(built, st);
+      if (!v.ok) continue;
+      opts.push({ pieces: built.pieces, ds: built.ds, adapters: r.adapters, outside: v.outside, score: r.score + v.outside * 15 });
+      if (opts.length >= 15) break;
+    }
+    opts.sort((x, y) => x.score - y.score);
+    if (!opts.length) {
+      let msg;
+      if (out.results.length) msg = 'Closures exist, but every one found would overlap existing track or run off the overflow area.';
+      else if (out.nearest != null && out.nearest < 40) msg = `No exact closure with these pieces — the nearest leaves a ${out.nearest.toFixed(1)} mm gap.` + (settings.autoAdapters ? ' Try allowing more pieces or curve sizes in Settings → Auto loop.' : ' Try allowing closure adapters in Settings → Auto loop.');
+      else msg = 'No closure found within the piece and curve limits in Settings → Auto loop.';
+      if (out.timedOut) msg += ' (The search hit its time limit.)';
+      refreshHud(); toast(msg, 6000); return;
+    }
+    suggest = { options: opts.slice(0, 3), idx: 0, st };
+    refreshHud(); render();
+  }
+  function acceptSuggest() {
+    if (!suggest) return;
+    const o = suggest.options[suggest.idx];
+    suggest = null;
+    mutate(() => design.pieces.push(...o.pieces));
+    activeEnd = null;
+    toast(derived.stats.openEnds === 0 ? `Loop closed — ${o.pieces.length} piece${o.pieces.length === 1 ? '' : 's'} added.` : `${o.pieces.length} pieces added.`);
+    refresh();
+  }
+  function cancelSuggest() { if (suggest) { suggest = null; refreshHud(); render(); } }
+  function drawSuggestion(ds) {
+    const px = 1 / view.s;
+    ds.forEach((d) => {
+      poly(d.outline); ctx.closePath();
+      ctx.fillStyle = 'rgba(46,158,106,.20)'; ctx.fill();
+      ctx.setLineDash([6 * px, 4 * px]); ctx.lineWidth = 1.8 * px; ctx.strokeStyle = '#2e9e6a'; ctx.stroke(); ctx.setLineDash([]);
+      ctx.lineWidth = Math.max(d.wallT, 1.4 * px); ctx.strokeStyle = 'rgba(29,122,79,.7)';
+      poly(d.railL); ctx.stroke(); poly(d.railR); ctx.stroke();
+      if (settings.showLabels && d.W * view.s > 34) labelAt(d, d.shortLabel, '#1d7a4f');
+    });
   }
 
   /* ---------- modal / toast ---------- */
@@ -1055,6 +1238,13 @@
       ['floorThickness', 'Floor thickness', 'mm'], ['defaultWidth', 'Default width', '', ['single', 'double']],
       ['defaultStraight', 'Default straight', '', 'straights'], ['defaultCurve', 'Default curve', '', 'curves'], ['clearance', 'Pass-under clearance', 'mm between levels']
     ],
+    'Auto loop': [
+      ['autoMaxPieces', 'Max pieces to add', 'pieces · also sets how far apart the ends can be'],
+      ['autoMaxCurves', 'Max curves to add', 'curves (lowered automatically if the search would be too big)'],
+      ['autoCurves', 'Curves the solver may use', '', [['design', 'Curve sizes already in the design'], ['defaultIR', 'Default curve size only'], ['cycle', 'Arrow-key cycle curves'], ['all', 'All curves (slower)']]],
+      ['autoAdapters', 'Allow closure adapters (S121, S236, D71, D141)', 'bool'],
+      ['autoTimeLimit', 'Search time limit', 'seconds']
+    ],
     Printing: [
       ['density', 'Material density', 'g/cm³ (PETG ≈ 1.27)'], ['filamentDiameter', 'Filament diameter', 'mm'], ['solidity', 'Solidity factor', '0–1 (walls/infill)'],
       ['jointVolume', 'Connector allowance', 'cm³ per piece'], ['gramsPerHour', 'Print throughput', 'g per hour'], ['overheadMin', 'Per-plate overhead', 'min (heat-up, purge)'],
@@ -1076,7 +1266,7 @@
       body.innerHTML = `<div class="form-grid">${FIELDS[t].map(([k, label, unit, opt]) => {
         if (unit === 'bool') return `<div class="field check"><input type="checkbox" id="f_${k}" ${work[k] ? 'checked' : ''}><label for="f_${k}">${label}</label></div>`;
         if (opt) {
-          const list = opt === 'straights' ? straightsOpts() : opt === 'curves' ? curveOpts() : opt.map((v) => [v, v]);
+          const list = opt === 'straights' ? straightsOpts() : opt === 'curves' ? curveOpts() : opt.map((v) => (Array.isArray(v) ? v : [v, v]));
           return `<div class="field"><label for="f_${k}">${label}</label><select id="f_${k}">${list.map(([v, l]) => `<option value="${v}" ${String(work[k]) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${unit ? `<small>${unit}</small>` : ''}</div>`;
         }
         const type = unit === 'text' ? 'text' : 'number';
@@ -1084,7 +1274,8 @@
       }).join('')}</div>`;
       FIELDS[t].forEach(([k, , unit, opt]) => {
         const el = $('#f_' + k, body);
-        el.onchange = () => { work[k] = unit === 'bool' ? el.checked : unit === 'text' || (opt && typeof opt === 'string') || k === 'wheel' || k === 'defaultWidth' ? el.value : parseFloat(el.value); };
+        const firstOpt = Array.isArray(opt) ? (Array.isArray(opt[0]) ? opt[0][0] : opt[0]) : null;
+        el.onchange = () => { work[k] = unit === 'bool' ? el.checked : unit === 'text' || (opt && typeof opt === 'string') || typeof firstOpt === 'string' ? el.value : parseFloat(el.value); };
       });
     }
     function showParts() {
@@ -1144,6 +1335,9 @@
   function applySettings(work) {
     ['workspaceW', 'workspaceH', 'gridSize', 'laneWidth', 'wallHeight', 'density', 'filamentDiameter', 'gramsPerHour'].forEach((k) => { if (!(work[k] > 0)) work[k] = DEFAULT_SETTINGS[k]; });
     work.solidity = Math.min(1, Math.max(0.05, work.solidity || DEFAULT_SETTINGS.solidity));
+    work.autoMaxPieces = Math.round(Math.min(16, Math.max(1, work.autoMaxPieces || DEFAULT_SETTINGS.autoMaxPieces)));
+    work.autoMaxCurves = Math.round(Math.min(10, Math.max(0, isFinite(work.autoMaxCurves) ? work.autoMaxCurves : DEFAULT_SETTINGS.autoMaxCurves)));
+    work.autoTimeLimit = Math.min(30, Math.max(1, work.autoTimeLimit || DEFAULT_SETTINGS.autoTimeLimit));
     settings = work; LS.set(KEYS.settings, settings);
     buildParts(); buildPalette(); refresh(); fitView(); toast('Settings saved.');
   }
@@ -1153,7 +1347,7 @@
       ['Place tool / Select tool', 'P / V'], ['Cycle curves', '↑ ↓'], ['Cycle straight lengths', '← →'], ['Rotate (ghost or selection)', 'R / Shift R'],
       ['Flip curve direction', 'F'], ['Toggle single / double width', 'W'], ['Add piece at active end', 'Enter'], ['Delete selection / last piece', 'Del / ⌫'],
       ['Undo / Redo', 'Ctrl Z / Ctrl ⇧ Z'], ['Save / Open', 'Ctrl S / Ctrl O'], ['Blueprint PNG', 'Ctrl E'], ['Select all', 'Ctrl A'],
-      ['Pan', 'Space-drag · right/middle drag'], ['Sample tracks', '? menu'], ['Zoom', 'Wheel · + / −'], ['Fit workspace / fit track', '0 / 9'], ['Select connected chain', 'Double-click']
+      ['Auto loop — close the track', 'L'], ['Pan', 'Space-drag · right/middle drag'], ['Sample tracks', '? menu'], ['Zoom', 'Wheel · + / −'], ['Fit workspace / fit track', '0 / 9'], ['Select connected chain', 'Double-click']
     ];
     modal({
       title: 'TinyTMT track designer — how to', html: `
@@ -1214,6 +1408,7 @@
   $('#tRotate').onclick = () => rotateSelection(1);
   $('#tFlip').onclick = flip;
   $('#tDelete').onclick = deleteSelection;
+  $('#tAutoLoop').onclick = () => runAutoLoop();
   $('#tUndo').onclick = undo; $('#tRedo').onclick = redo;
   $('#tZoomIn').onclick = () => { const r = canvas.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.25); };
   $('#tZoomOut').onclick = () => { const r = canvas.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 0.8); };
@@ -1235,5 +1430,5 @@
   buildPalette(); syncControls(); setTool(ui.tool === 'select' ? 'select' : 'place');
   requestAnimationFrame(() => { design.pieces.length ? fitToTrack() : fitView(); refresh(); if (design.pieces.length) activeEnd = { pid: design.pieces[design.pieces.length - 1].id, end: 1 }; render(); });
   if (!LS.get('tinytmt.seenHelp', false)) { LS.set('tinytmt.seenHelp', true); setTimeout(showHelp, 400); }
-  window.__tinytmt = { get design() { return design; }, get derived() { return derived; }, appendAtActiveEnd, setActivePart, cycle, undo, redo, exportPng, saveToLibrary, view, fitView, toWorld, placeGhost, updateGhost, setTool, get ghost() { return ghost; } };
+  window.__tinytmt = { refresh: () => { cleanupRefs(); refresh(); }, runAutoLoop, acceptSuggest, autoLoopEnds, get suggest() { return suggest; }, get solving() { return solving; }, get design() { return design; }, get derived() { return derived; }, appendAtActiveEnd, setActivePart, cycle, undo, redo, exportPng, saveToLibrary, view, fitView, toWorld, placeGhost, updateGhost, setTool, get ghost() { return ghost; } };
 })();

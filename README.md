@@ -15,6 +15,7 @@ It's plain HTML/CSS/JS with no build step and no dependencies, and it works offl
 
 - A 1.5 m × 2 m workspace grid with a 50 % overflow area around it. Sizes are configurable.
 - Click to place, or drag pieces from the palette. Pieces snap to the grid or to the nearest open track end.
+- **Auto loop:** one click (or `L`) suggests pieces that close your track, greyed out when the ends are too far apart.
 - **Colour-coded families:** straights, each curve radius and ramps each have their own colour in the palette, on the canvas and in the BoM. Curves are grouped by inner radius, widest turn (90°) first.
 - **Arrow keys:** ↑/↓ cycle through curves and ←/→ through straight lengths. The default pieces are the 250 mm straight and the 45° curve.
 - **Enter** adds the current piece to the end you last built, so you can lay a whole track from the keyboard.
@@ -67,6 +68,17 @@ Drop-in replacements for a 250 mm straight, so they never affect whether a loop 
 | Kerb step (no curb cut) | Raised kerb block across the lane — pair with ramps to show why curb cuts matter |
 | Cross-slope | Floor tilts sideways, like a driveway crossing a pavement |
 
+## Auto loop
+
+**Auto loop** (toolbar, or press `L`) finds pieces that join the two loose ends of your track and previews up to three options. Use ←/→ to compare them, Enter to add one, and Esc to cancel.
+
+The button is greyed out, with the reason shown on hover, when a closure can't work:
+- there aren't exactly two loose ends on one run of track;
+- the ends are different widths or at different heights (it doesn't add ramps);
+- the ends are **too far apart**: further than the allowed number of added pieces could reach, counting the curves needed to line the ends up. Raise the limit under **Settings → Auto loop**.
+
+How it works: every curve turns a multiple of 15°, so the solver first lists curve sequences that produce the right total turn. With the curves fixed, the direction of every straight run is known, so closing the gap becomes two small equations that it solves using the available straight lengths (and closure adapters, if allowed). Candidates are ranked by piece count, adapters used and whether they reuse curve sizes already in the design, then checked for overlaps and workspace limits. It runs in a background Web Worker with no dependencies, so it works offline.
+
 ## Keyboard
 
 | Action | Keys |
@@ -106,6 +118,7 @@ css/styles.css
 js/parts.js                parts catalogue (edit / extend here)
 js/geometry.js             piece geometry (poses, arcs, hit tests)
 js/marks.js                obstacle insert markings
+js/solver.js               auto-loop solver (runs in a Web Worker)
 js/blueprint.js            blueprint PNG + thumbnails
 js/names.js                random title generator
 js/samples.js              built-in sample tracks

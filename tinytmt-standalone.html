@@ -101,6 +101,10 @@ kbd { font: 11px ui-monospace, Menlo, Consolas, monospace; background: #eef1f6; 
 .tool:hover { background: #f0f3f8; }
 .tool.on { background: var(--accent-soft); color: var(--accent); }
 .tool:disabled { opacity: .35; cursor: default; }
+.tool.is-disabled { opacity: .38; cursor: not-allowed; }
+.tool.busy { color: var(--accent); }
+.tool.busy span::after { content: '…'; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .2; } }
 .tool.zoom-label { font-size: 12px; min-width: 52px; font-variant-numeric: tabular-nums; }
 .sep { width: 1px; height: 20px; background: var(--line); margin: 0 3px; }
 .hud { position: absolute; left: 10px; bottom: 10px; z-index: 5; background: rgba(20,33,61,.88); color: #fff; font-size: 12px; padding: 7px 10px; border-radius: 8px; pointer-events: none; max-width: 70%; line-height: 1.5; }
@@ -174,7 +178,7 @@ kbd { font: 11px ui-monospace, Menlo, Consolas, monospace; background: #eef1f6; 
 .shortcuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 4px 24px; }
 .shortcuts div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px dashed #eef1f6; font-size: 13px; }
 
-.toast { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 9px 16px; border-radius: 10px; font-size: 13px; z-index: 60; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+.toast { position: fixed; left: 50%; top: 64px; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 9px 16px; border-radius: 10px; font-size: 13px; z-index: 60; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
 .drag-ghost { position: fixed; pointer-events: none; z-index: 70; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 99px; transform: translate(12px, 12px); }
 
 @media (max-width: 1100px) {
@@ -261,6 +265,7 @@ kbd { font: 11px ui-monospace, Menlo, Consolas, monospace; background: #eef1f6; 
         <button class="tool" id="tRotate" title="Rotate (R / Shift+R)">⟳</button>
         <button class="tool" id="tFlip" title="Flip curve direction (F)">⇋</button>
         <button class="tool" id="tDelete" title="Delete (Del)">🗑</button>
+        <button class="tool" id="tAutoLoop" title="Auto loop (L)">⟲<span>Auto loop</span></button>
         <span class="sep"></span>
         <button class="tool" id="tUndo" title="Undo (Ctrl+Z)">↶</button>
         <button class="tool" id="tRedo" title="Redo (Ctrl+Shift+Z)">↷</button>
@@ -785,6 +790,203 @@ kbd { font: 11px ui-monospace, Menlo, Consolas, monospace; background: #eef1f6; 
 
 </script>
   <script>
+/*
+ * TinyTMT auto-loop solver. Pure function, no DOM, no dependencies — runs in a Web Worker
+ * (created from this function's source) or on the main thread as a fallback.
+ *
+ * Problem: find a sequence of pieces that leaves pose START and arrives exactly at pose TARGET.
+ *
+ * Method (see README → Auto loop):
+ *  1. Turn plans: every curve angle is a multiple of 15°, so headings are discrete. Enumerate curve
+ *     sequences (iterative deepening) whose total turn equals the required heading change.
+ *  2. Lengths: with the curves fixed, the heading of every straight "gap" between curves is known,
+ *     so closing the position is a small linear problem: residual = Σ gapLength · direction.
+ *     Gaps sharing a heading merge; we solve for 0–3 distinct directions, snapping each length
+ *     to a sum of available straight pieces (precomputed).
+ *  3. Rank by piece count, adapters used and leftover gap.
+ *
+ * Units: mm and degrees. Heading 0 = +x, positive = clockwise on screen (y down). Curve dir +1 = right.
+ */
+(function (root) {
+  function core(P) {
+    var t0 = Date.now(), D2R = Math.PI / 180, tol = P.tol || 1.2;
+    function norm(a) { a %= 360; if (a < 0) a += 360; return a; }
+    function rot(x, y, a) { var r = a * D2R, c = Math.cos(r), s = Math.sin(r); return { x: x * c - y * s, y: x * s + y * c }; }
+
+    // ---- achievable straight runs: every multiset of straight pieces up to maxPieces, keyed by length
+    var straights = P.straights.slice().sort(function (a, b) { return b.length - a.length; });
+    var Lmax = straights.length ? straights[0].length : 0;
+    var byKey = new Map();
+    var zero = { len: 0, pieces: [], n: 0, adapters: 0 };
+    byKey.set(0, zero);
+    var frontier = [zero];
+    var maxRun = Math.min(P.maxPieces, 10);
+    for (var k = 1; k <= maxRun && straights.length; k++) {
+      var next = [];
+      for (var f = 0; f < frontier.length; f++) {
+        var base = frontier[f];
+        for (var si = 0; si < straights.length; si++) {
+          var st = straights[si];
+          var len = base.len + st.length;
+          if (len > P.maxGap) continue;
+          var key = Math.round(len * 100);
+          var ad = base.adapters + (st.adapter ? 1 : 0);
+          var ex = byKey.get(key);
+          if (ex && (ex.n < k || (ex.n === k && ex.adapters <= ad))) continue;
+          var e = { len: len, pieces: base.pieces.concat([st]).sort(function (a, b) { return b.length - a.length; }), n: k, adapters: ad };
+          byKey.set(key, e); next.push(e);
+        }
+      }
+      frontier = next;
+    }
+    var runs = Array.from(byKey.values()).sort(function (a, b) { return a.len - b.len; });
+    var runLens = new Float64Array(runs.map(function (r) { return r.len; }));
+    var coarse = runs.filter(function (r) { return r.n <= 2 && r.len > 0; });
+    function near(g, win) {
+      var out = [];
+      if (g < -win) return out;
+      var lo = 0, hi = runLens.length - 1;
+      while (lo < hi) { var mid = (lo + hi) >> 1; if (runLens[mid] < g) lo = mid + 1; else hi = mid; }
+      for (var i = Math.max(0, lo - 2); i <= Math.min(runLens.length - 1, lo + 1); i++) if (Math.abs(runLens[i] - g) <= win) out.push(runs[i]);
+      return out;
+    }
+
+    // ---- curve options
+    var curves = [];
+    P.curves.forEach(function (c) {
+      var R = c.ir + P.W / 2, t = c.angle * D2R;
+      [1, -1].forEach(function (dir) {
+        curves.push({ id: c.id, angle: c.angle, dir: dir, lx: R * Math.sin(t), ly: dir * (R - R * Math.cos(t)), da: dir * c.angle, pref: c.pref ? 1 : 0 });
+      });
+    });
+    var maxAng = curves.reduce(function (m, c) { return Math.max(m, c.angle); }, 0);
+
+    var S = P.start, T = P.target, startH = norm(S.a), targetH = norm(T.a);
+    var results = new Map(), best = Infinity, evals = 0, nodes = 0, timedOut = false;
+    var seq = [], gapsH = [startH], Dx = 0, Dy = 0;
+
+    function record(assign, err) {
+      // assign: map gapIndex -> run
+      var items = [], count = seq.length, adapters = 0, curveScore = 0;
+      for (var gi = 0; gi <= seq.length; gi++) {
+        var run = assign[gi];
+        if (run) { run.pieces.forEach(function (p) { items.push({ id: p.id, dir: 1 }); }); count += run.n; adapters += run.adapters; }
+        if (gi < seq.length) { items.push({ id: seq[gi].id, dir: seq[gi].dir }); curveScore += seq[gi].pref ? 0 : 1; }
+      }
+      if (count > P.maxPieces || count === 0) return;
+      var sig = items.map(function (it) { return it.id + (it.dir < 0 ? 'L' : 'R'); }).join(',');
+      var score = count * 10 + adapters * 6 + curveScore * 5 + err * 2;
+      var prev = results.get(sig);
+      if (!prev || prev.score > score) results.set(sig, { items: items, count: count, adapters: adapters, err: err, score: score });
+    }
+
+    function evaluate() {
+      evals++;
+      var Rx = T.x - S.x - Dx, Ry = T.y - S.y - Dy;
+      var resid = Math.hypot(Rx, Ry);
+      if (resid <= tol) { record({}, resid); best = Math.min(best, resid); }
+      // distinct gap directions
+      var dirs = [], seen = {};
+      for (var i = 0; i < gapsH.length; i++) {
+        var hk = Math.round(gapsH[i] * 1000);
+        if (seen[hk] !== undefined) continue;
+        seen[hk] = dirs.length;
+        var u = rot(1, 0, gapsH[i]);
+        dirs.push({ gi: i, ux: u.x, uy: u.y });
+      }
+      var win = tol * 4;
+      // one direction
+      for (var a = 0; a < dirs.length; a++) {
+        var d = dirs[a], g = Rx * d.ux + Ry * d.uy, perp = Math.abs(Rx * d.uy - Ry * d.ux);
+        if (g < -tol) continue;
+        var cand = near(g, Math.max(win, 30));
+        for (var c = 0; c < cand.length; c++) {
+          var err = Math.hypot(perp, g - cand[c].len);
+          if (err < best) best = err;
+          if (err <= tol) { var as = {}; as[d.gi] = cand[c]; record(as, err); }
+        }
+      }
+      // two directions (exact 2x2 solve), optionally after fixing a third from the coarse list
+      function pair(rx, ry, A, B, extra) {
+        var det = A.ux * B.uy - A.uy * B.ux;
+        if (Math.abs(det) < 1e-6) return;
+        var ga = (rx * B.uy - ry * B.ux) / det, gb = (A.ux * ry - A.uy * rx) / det;
+        if (ga < -tol || gb < -tol) return;
+        var ca = near(ga, win), cb = near(gb, win);
+        for (var i = 0; i < ca.length; i++) for (var j = 0; j < cb.length; j++) {
+          var ex = rx - ca[i].len * A.ux - cb[j].len * B.ux, ey = ry - ca[i].len * A.uy - cb[j].len * B.uy;
+          var err = Math.hypot(ex, ey);
+          if (err < best) best = err;
+          if (err <= tol) { var as = {}; as[A.gi] = ca[i]; as[B.gi] = cb[j]; if (extra) as[extra.gi] = extra.run; record(as, err); }
+        }
+      }
+      for (var p = 0; p < dirs.length; p++) for (var q = p + 1; q < dirs.length; q++) pair(Rx, Ry, dirs[p], dirs[q]);
+      if (dirs.length >= 3 && seq.length >= 2) {
+        for (var w = 0; w < dirs.length; w++) {
+          var W3 = dirs[w];
+          for (var ci = 0; ci < coarse.length; ci++) {
+            var run = coarse[ci], rx = Rx - run.len * W3.ux, ry = Ry - run.len * W3.uy;
+            for (var p2 = 0; p2 < dirs.length; p2++) {
+              if (p2 === w) continue;
+              for (var q2 = p2 + 1; q2 < dirs.length; q2++) { if (q2 === w) continue; pair(rx, ry, dirs[p2], dirs[q2], { gi: W3.gi, run: run }); }
+            }
+          }
+        }
+      }
+    }
+
+    function dfs(h, depth, M) {
+      if (timedOut) return;
+      if ((++nodes & 1023) === 0 && Date.now() - t0 > P.timeLimit) { timedOut = true; return; }
+      var diff = norm(targetH - h), dd = Math.min(diff, 360 - diff);
+      if (depth === M) { if (dd < 1e-6) evaluate(); return; }
+      if (dd > maxAng * (M - depth) + 1e-6) return;
+      for (var i = 0; i < curves.length; i++) {
+        var c = curves[i], r = rot(c.lx, c.ly, h), nh = norm(h + c.da);
+        seq.push(c); gapsH.push(nh); Dx += r.x; Dy += r.y;
+        dfs(nh, depth + 1, M);
+        seq.pop(); gapsH.pop(); Dx -= r.x; Dy -= r.y;
+        if (timedOut) return;
+      }
+    }
+    var depthReached = -1;
+    for (var M = 0; M <= P.maxCurves && !timedOut; M++) {
+      dfs(startH, 0, M);
+      if (!timedOut) depthReached = M;
+      // any plan with more curves has at least M+1 pieces: stop once that can't beat the best found
+      var minCount = Infinity;
+      results.forEach(function (r) { if (r.count < minCount) minCount = r.count; });
+      if (M + 1 > minCount + (P.slack == null ? 0 : P.slack)) break;
+    }
+    var list = Array.from(results.values()).sort(function (a, b) { return a.score - b.score; }).slice(0, P.maxResults || 80);
+    return { results: list, nearest: isFinite(best) ? best : null, timedOut: timedOut, evals: evals, nodes: nodes, depthReached: depthReached, ms: Date.now() - t0, runs: runs.length };
+  }
+
+  /** Run in a Web Worker built from this function's source (works from file:// and single-file builds). */
+  function solveAsync(params) {
+    return new Promise(function (resolve, reject) {
+      var worker;
+      try {
+        var src = 'var core = (' + core.toString() + ');\nself.onmessage = function (e) { try { self.postMessage({ ok: true, out: core(e.data) }); } catch (err) { self.postMessage({ ok: false, error: String(err) }); } };';
+        worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      } catch (e) {
+        // Fallback: main thread (brief freeze) when workers are unavailable.
+        try { resolve(core(params)); } catch (err) { reject(err); }
+        return;
+      }
+      var timer = setTimeout(function () { worker.terminate(); reject(new Error('timeout')); }, params.timeLimit + 4000);
+      worker.onmessage = function (e) { clearTimeout(timer); worker.terminate(); e.data.ok ? resolve(e.data.out) : reject(new Error(e.data.error)); };
+      worker.onerror = function (e) { clearTimeout(timer); worker.terminate(); try { resolve(core(params)); } catch (err) { reject(err); } };
+      solveAsync.cancel = function () { clearTimeout(timer); worker.terminate(); reject(new Error('cancelled')); };
+      worker.postMessage(params);
+    });
+  }
+
+  root.TinyTMTSolver = { core: core, solveAsync: solveAsync };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+  <script>
 /* Built-in sample tracks (also in /examples as .tinytmt.json). */
 window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d7166030","title":"Rubber Duck Lagoon Loop","created":"2026-11-17T05:41:28.084774+00:00","modified":"2026-11-17T05:41:28.084774+00:00","pieces":[{"id":"f0eeb9afb9","part":"S250","x":750,"y":500,"a":0,"z":0,"dir":"R","width":"single"},{"id":"87df71086e","part":"S250","x":1000.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"5f3e0e4d27","part":"C45-R200","x":1250.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"eccdb72ad8","part":"C45-R200","x":1434.201,"y":576.299,"a":45,"z":0,"dir":"R","width":"single"},{"id":"87d8157dbc","part":"C45-R200","x":1510.5,"y":760.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"f52028f368","part":"C45-R200","x":1434.201,"y":944.701,"a":135,"z":0,"dir":"R","width":"single"},{"id":"047d8f17f5","part":"S250","x":1250.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"160a5013da","part":"S250","x":1000.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"cca442cc6d","part":"C45-R200","x":750.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"bce721fb00","part":"C45-R200","x":565.799,"y":944.701,"a":225,"z":0,"dir":"R","width":"single"},{"id":"33243ec080","part":"C45-R200","x":489.5,"y":760.5,"a":270,"z":0,"dir":"R","width":"single"},{"id":"01f4d5a0e1","part":"C45-R200","x":565.799,"y":576.299,"a":315,"z":0,"dir":"R","width":"single"}],"blurb":"Beginner oval \u2014 learn to steer, 2 straights each side."},{"format":"tinytmt-design","version":1,"id":"124be4144323","title":"Sprocket Slalom Speedway","created":"2026-11-17T05:41:28.084876+00:00","modified":"2026-11-17T05:41:28.084876+00:00","pieces":[{"id":"dbb7fe1a5b","part":"S150","x":550,"y":500,"a":0,"z":0,"dir":"R","width":"single"},{"id":"0ae3212a27","part":"C30-R250","x":700.0,"y":500.0,"a":0,"z":0,"dir":"L","width":"single"},{"id":"05d536e0b2","part":"C30-R250","x":855.25,"y":458.401,"a":330,"z":0,"dir":"R","width":"single"},{"id":"1611b48983","part":"C30-R250","x":1010.5,"y":416.802,"a":0,"z":0,"dir":"R","width":"single"},{"id":"e46dcf8dfd","part":"C30-R250","x":1165.75,"y":458.401,"a":30,"z":0,"dir":"L","width":"single"},{"id":"6bdb913ec7","part":"S150","x":1321.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"c1e61486c4","part":"C90-R200","x":1471.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"bd15b3154b","part":"C90-R200","x":1731.5,"y":760.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"03a1f806bf","part":"S150","x":1471.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"d480141eff","part":"C30-R250","x":1321.0,"y":1021.0,"a":180,"z":0,"dir":"L","width":"single"},{"id":"582ee96a44","part":"C30-R250","x":1165.75,"y":1062.599,"a":150,"z":0,"dir":"R","width":"single"},{"id":"f539a7a6da","part":"C30-R250","x":1010.5,"y":1104.198,"a":180,"z":0,"dir":"R","width":"single"},{"id":"aea1294623","part":"C30-R250","x":855.25,"y":1062.599,"a":210,"z":0,"dir":"L","width":"single"},{"id":"99fd5bf4cd","part":"S150","x":700.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"44d28e8da6","part":"C90-R200","x":550.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"d0a4bdab46","part":"C90-R200","x":289.5,"y":760.5,"a":270,"z":0,"dir":"R","width":"single"}],"blurb":"Swerves on both long sides \u2014 tests steering precision."},{"format":"tinytmt-design","version":1,"id":"4ab35e25ce7f","title":"Curb Cut Canyon Climb","created":"2026-11-17T05:41:28.084969+00:00","modified":"2026-11-17T05:41:28.084969+00:00","pieces":[{"id":"e20e19a052","part":"S150","x":500,"y":450,"a":0,"z":0,"dir":"R","width":"single"},{"id":"727ba1ad53","part":"RU250","x":650.0,"y":450.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"ec6ed2b3c7","part":"S250","x":896.0,"y":450.0,"a":0,"z":45,"dir":"R","width":"single"},{"id":"a7bd97a45c","part":"RD250","x":1146.0,"y":450.0,"a":0,"z":45,"dir":"R","width":"single"},{"id":"5db3b48e3c","part":"S150","x":1392.0,"y":450.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"ee4b6945fb","part":"C45-R250","x":1542.0,"y":450.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"92bfe2f3d8","part":"C45-R250","x":1761.557,"y":540.943,"a":45,"z":0,"dir":"R","width":"single"},{"id":"65c3ea3394","part":"C45-R250","x":1852.5,"y":760.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"9c97e43b0d","part":"C45-R250","x":1761.557,"y":980.057,"a":135,"z":0,"dir":"R","width":"single"},{"id":"0c454b3068","part":"S150","x":1542.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"f534a4d304","part":"L246","x":1392.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"9f8f41013a","part":"S250","x":1146.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"cdccd81bff","part":"L246","x":896.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"01e554e69a","part":"S150","x":650.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"7caba553dc","part":"C45-R250","x":500.0,"y":1071.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"7142fc221f","part":"C45-R250","x":280.443,"y":980.057,"a":225,"z":0,"dir":"R","width":"single"},{"id":"5f143f30bc","part":"C45-R250","x":189.5,"y":760.5,"a":270,"z":0,"dir":"R","width":"single"},{"id":"2683bfcc2e","part":"C45-R250","x":280.443,"y":540.943,"a":315,"z":0,"dir":"R","width":"single"}],"blurb":"Ramp up, cross a raised deck, ramp down \u2014 a curb-cut challenge."},{"format":"tinytmt-design","version":1,"id":"426b6f3cd96f","title":"Big Wheel Boulevard","created":"2026-11-17T05:41:28.085033+00:00","modified":"2026-11-17T05:41:28.085033+00:00","pieces":[{"id":"a0eb26c415","part":"C45-R200","x":550,"y":450,"a":0,"z":0,"dir":"R","width":"double"},{"id":"98251420b2","part":"C45-R200","x":774.86,"y":543.14,"a":45,"z":0,"dir":"L","width":"double"},{"id":"934a49ec5e","part":"C45-R200","x":999.72,"y":636.28,"a":0,"z":0,"dir":"L","width":"double"},{"id":"6512f07e69","part":"C45-R200","x":1224.58,"y":543.14,"a":315,"z":0,"dir":"R","width":"double"},{"id":"1f6cd64fa6","part":"C90-R200","x":1449.44,"y":450.0,"a":0,"z":0,"dir":"R","width":"double"},{"id":"e3cd87fffd","part":"C90-R200","x":1767.44,"y":768.0,"a":90,"z":0,"dir":"R","width":"double"},{"id":"b163b03464","part":"S400","x":1449.44,"y":1086.0,"a":180,"z":0,"dir":"R","width":"double"},{"id":"c0ad6e46dd","part":"S400","x":1049.44,"y":1086.0,"a":180,"z":0,"dir":"R","width":"double"},{"id":"609bca5a21","part":"S100","x":649.44,"y":1086.0,"a":180,"z":0,"dir":"R","width":"double"},{"id":"87c4e1a107","part":"C90-R200","x":549.44,"y":1086.0,"a":180,"z":0,"dir":"R","width":"double"},{"id":"823cdf7106","part":"C90-R200","x":231.44,"y":768.0,"a":270,"z":0,"dir":"R","width":"double"}],"blurb":"Double width \u2014 room for two chairs side by side, with a pinch."},{"format":"tinytmt-design","version":1,"id":"5hq101ime1sg","title":"Figure Eight Overpass Speedway","created":"2026-11-17T03:43:41.968Z","modified":"2026-11-17T03:43:43.039Z","pieces":[{"id":"1z90x9ude2dv","part":"RU250","dir":"R","width":"single","x":616.041,"y":366.5250000000001,"a":45,"z":0},{"id":"a8gr3ygye2e3","part":"RU150","dir":"R","width":"single","x":789.989,"y":540.4730000000002,"a":45,"z":45},{"id":"950w6dkne2ei","part":"S300","dir":"R","width":"single","x":893.9340000000001,"y":644.4180000000001,"a":45,"z":75},{"id":"c433lgrse2et","part":"RD150","dir":"R","width":"single","x":1106.066,"y":856.5500000000002,"a":45,"z":75},{"id":"352xrmswe2f0","part":"RD250","dir":"R","width":"single","x":1210.011,"y":960.4950000000001,"a":45,"z":45},{"id":"mkqukzzre2fg","part":"C45-R200","dir":"L","width":"single","x":1383.9589999999998,"y":1134.443,"a":45,"z":0},{"id":"tl76uy96e2fn","part":"C45-R200","dir":"L","width":"single","x":1568.1599999999999,"y":1210.7420000000002,"a":0,"z":0},{"id":"3fbvm5i3e2ft","part":"C45-R200","dir":"L","width":"single","x":1752.3609999999999,"y":1134.443,"a":315,"z":0},{"id":"i1b9kvv9e2g6","part":"S400","dir":"L","width":"single","x":1828.6599999999999,"y":950.2420000000002,"a":270,"z":0},{"id":"ht54ys67e2ge","part":"C45-R200","dir":"L","width":"single","x":1828.6599999999999,"y":550.2420000000002,"a":270,"z":0},{"id":"9pdt352he2gm","part":"C45-R200","dir":"L","width":"single","x":1752.3609999999999,"y":366.04100000000017,"a":225,"z":0},{"id":"tmlykgh8e2gt","part":"C45-R200","dir":"L","width":"single","x":1568.1599999999999,"y":289.7420000000002,"a":180,"z":0},{"id":"95uvyh1te2h8","part":"L246","dir":"L","width":"single","x":1383.9589999999998,"y":366.04100000000017,"a":135,"z":0},{"id":"xtdl6irne2hm","part":"L147","dir":"L","width":"single","x":1210.011,"y":539.989,"a":135,"z":0},{"id":"99pa3v1te2hu","part":"S300","dir":"L","width":"single","x":1106.066,"y":643.9340000000002,"a":135,"z":0},{"id":"jiwo3egbe2ig","part":"L147","dir":"L","width":"single","x":893.9340000000001,"y":856.066,"a":135,"z":0},{"id":"gw7lidjee2iq","part":"L246","dir":"L","width":"single","x":789.989,"y":960.0110000000002,"a":135,"z":0},{"id":"c1pfkaaoe2jm","part":"C45-R200","dir":"R","width":"single","x":616.041,"y":1133.959,"a":135,"z":0},{"id":"t7aiix7je2jv","part":"C45-R200","dir":"R","width":"single","x":431.84000000000003,"y":1210.258,"a":180,"z":0},{"id":"bjmvgf8ae2k4","part":"C45-R200","dir":"R","width":"single","x":247.63900000000007,"y":1133.959,"a":225,"z":0},{"id":"o2ud5biae2l0","part":"S400","dir":"R","width":"single","x":171.34000000000006,"y":949.758,"a":270,"z":0},{"id":"dzqpa8r6e2lq","part":"C45-R200","dir":"R","width":"single","x":171.34000000000006,"y":549.758,"a":270,"z":0},{"id":"kncguf8de2lv","part":"C45-R200","dir":"R","width":"single","x":247.63900000000007,"y":365.557,"a":315,"z":0},{"id":"qlwtdt0je2m7","part":"C45-R200","dir":"R","width":"single","x":431.84000000000003,"y":289.25800000000004,"a":0,"z":0}],"blurb":"Over/under figure eight using the ramp set and lower-level straights."},{"format":"tinytmt-design","version":1,"id":"1fb2c9a81c47","title":"Kerbside Notch Circuit","created":"2026-11-17T06:59:03.991456+00:00","modified":"2026-11-17T06:59:03.991456+00:00","pieces":[{"id":"df479e30d1","part":"S250","x":1350,"y":100,"a":0,"z":0,"dir":"R","width":"single"},{"id":"8b8b2cf958","part":"C90-R200","x":1600.0,"y":100.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"b41f353e24","part":"S400","x":1860.5,"y":360.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"fc5b00cb87","part":"S250","x":1860.5,"y":760.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"faf417db60","part":"S121","x":1860.5,"y":1010.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"9ca21e74a9","part":"C90-R200","x":1860.5,"y":1131.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"c4e66b57b6","part":"S400","x":1600.0,"y":1392.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"0259d945fa","part":"S400","x":1200.0,"y":1392.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"5ccb5d8040","part":"S250","x":800.0,"y":1392.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"310592773e","part":"S121","x":550.0,"y":1392.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"c23a2422ff","part":"C90-R200","x":429.0,"y":1392.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"fcc6e94731","part":"S100","x":168.5,"y":1131.5,"a":270,"z":0,"dir":"R","width":"single"},{"id":"866244d836","part":"C90-R200","x":168.5,"y":1031.5,"a":270,"z":0,"dir":"R","width":"single"},{"id":"003aa95f1a","part":"S400","x":429.0,"y":771.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"4ed50893a0","part":"C90-R200","x":829.0,"y":771.0,"a":0,"z":0,"dir":"L","width":"single"},{"id":"2a5f85d747","part":"S150","x":1089.5,"y":510.5,"a":270,"z":0,"dir":"R","width":"single"},{"id":"330f6b7d4b","part":"C90-R200","x":1089.5,"y":360.5,"a":270,"z":0,"dir":"R","width":"single"}],"blurb":"L-shaped loop with an inside corner \u2014 closes thanks to two S121 track-width adapters."},{"format":"tinytmt-design","version":1,"id":"09d7fc3f4068","title":"Everyday Barriers Loop","created":"2026-11-17T06:59:03.991600+00:00","modified":"2026-11-17T06:59:03.991600+00:00","pieces":[{"id":"41a56b0b1a","part":"OB-DOOR","x":600,"y":500,"a":0,"z":0,"dir":"R","width":"single"},{"id":"5f650ee792","part":"OB-SILL","x":850.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"dd972004a6","part":"OB-ROUGH","x":1100.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"d96844b577","part":"C45-R200","x":1350.0,"y":500.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"d5dc4875ba","part":"C45-R200","x":1534.201,"y":576.299,"a":45,"z":0,"dir":"R","width":"single"},{"id":"4e8f52e889","part":"C45-R200","x":1610.5,"y":760.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"9cfcced031","part":"C45-R200","x":1534.201,"y":944.701,"a":135,"z":0,"dir":"R","width":"single"},{"id":"2499c4879f","part":"OB-KERB","x":1350.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"ff4895ce19","part":"OB-SLOPE","x":1100.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"e581cf26aa","part":"S250","x":850.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"f4d869b811","part":"C45-R200","x":600.0,"y":1021.0,"a":180,"z":0,"dir":"R","width":"single"},{"id":"524216e135","part":"C45-R200","x":415.799,"y":944.701,"a":225,"z":0,"dir":"R","width":"single"},{"id":"1ccb28077e","part":"C45-R200","x":339.5,"y":760.5,"a":270,"z":0,"dir":"R","width":"single"},{"id":"d3148fdc7e","part":"C45-R200","x":415.799,"y":576.299,"a":315,"z":0,"dir":"R","width":"single"}],"blurb":"All five obstacle inserts: doorway, sill, rough ground, kerb and cross-slope."},{"format":"tinytmt-design","version":1,"id":"6dd2ef819b08","title":"Chamfer Plaza Sprint","created":"2026-11-17T06:59:03.991673+00:00","modified":"2026-11-17T06:59:03.991673+00:00","pieces":[{"id":"4ad5a22fab","part":"S250","x":700,"y":250,"a":0,"z":0,"dir":"R","width":"single"},{"id":"df34d85ba6","part":"S250","x":950.0,"y":250.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"755b8ae3bf","part":"C45-R200","x":1200.0,"y":250.0,"a":0,"z":0,"dir":"R","width":"single"},{"id":"273ae0d511","part":"D141","x":1384.201,"y":326.299,"a":45,"z":0,"dir":"R","width":"single"},{"id":"8f0ec5823d","part":"C45-R200","x":1484.201,"y":426.298,"a":45,"z":0,"dir":"R","width":"single"},{"id":"3b9c0d9937","part":"S250","x":1560.5,"y":610.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"e7d9a7afb9","part":"C45-R200","x":1560.5,"y":860.5,"a":90,"z":0,"dir":"R","width":"single"},{"id":"6b1ac73daa","part":"D141","x":1484.201,"y":1044.701,"a":135,"z":0,"dir":"R","width":"single"},{"id":"48f6878721","part":"C45-R200","x":1384.201,"y":1144.701,"a":135,"z":0,"dir":"R","width":"single"},{"id":"eafbd5d693","part":"S400","x":1200.0,"y":1220.999,"a":180,"z":0,"dir":"R","width":"single"},{"id":"ec6b193323","part":"C45-R200","x":800.0,"y":1220.999,"a":180,"z":0,"dir":"R","width":"single"},{"id":"4b44b6eea1","part":"D141","x":615.799,"y":1144.701,"a":225,"z":0,"dir":"R","width":"single"},{"id":"12825eeb05","part":"C45-R200","x":515.799,"y":1044.701,"a":225,"z":0,"dir":"R","width":"single"},{"id":"d108e7d9a5","part":"S250","x":439.5,"y":860.5,"a":270,"z":0,"dir":"R","width":"single"},{"id":"5d632bfba0","part":"S100","x":439.5,"y":610.5,"a":270,"z":0,"dir":"R","width":"single"},{"id":"9cdefe0d43","part":"C90-R200","x":439.5,"y":510.5,"a":270,"z":0,"dir":"R","width":"single"}],"blurb":"Three 45\u00b0 cut corners and one square corner \u2014 D141 diagonals keep it on grid."}];
 
@@ -817,7 +1019,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
   const list = [];
   const listeners = {};
   const TinyTMT = root.TinyTMT || (root.TinyTMT = {});
-  TinyTMT.version = '1.3.0';
+  TinyTMT.version = '1.4.0';
   TinyTMT._emit = (ev, data) => (listeners[ev] || []).forEach((fn) => { try { fn(data); } catch (e) { console.error('[TinyTMT add-on]', e); } });
   TinyTMT._on = (ev, fn) => { (listeners[ev] = listeners[ev] || []).push(fn); return () => { listeners[ev] = listeners[ev].filter((f) => f !== fn); }; };
   TinyTMT.addons = {
@@ -864,6 +1066,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
     defaultWidth: 'single', defaultStraight: P.DEFAULT_STRAIGHT, defaultCurve: P.DEFAULT_CURVE, clearance: 55,
     density: 1.27, filamentDiameter: 1.75, solidity: 0.7, jointVolume: 4, gramsPerHour: 18, overheadMin: 6,
     supportBaseG: 12, supportGPerMm: 0.35, clipsPerJoint: 0, clipGrams: 2, costPerKg: 0, currency: '$',
+    autoMaxPieces: 8, autoMaxCurves: 6, autoCurves: 'design', autoAdapters: true, autoTimeLimit: 4,
     partOverrides: {}, customParts: []
   };
 
@@ -1101,6 +1304,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
   }
   function pushUndo(before) { undoStack.push(before); if (undoStack.length > 200) undoStack.shift(); redoStack = []; }
   function afterChange() {
+    if (suggest) suggest = null;
     dirty = true; design.modified = new Date().toISOString();
     refresh();
     autosave();
@@ -1365,6 +1569,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
       }
     }
     if (ghost) drawGhost(ghost.d);
+    if (suggest) drawSuggestion(suggest.options[suggest.idx].ds);
     if (drag && drag.type === 'band') {
       const a = drag.start, b = drag.cur;
       ctx.fillStyle = 'rgba(47,124,246,.08)'; ctx.strokeStyle = COL.sel; ctx.lineWidth = px;
@@ -1451,6 +1656,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
     render(); refreshStats(); refreshSide(); refreshHud();
     $('#dirtyDot').classList.toggle('on', dirty);
     $('#tUndo').disabled = !undoStack.length; $('#tRedo').disabled = !redoStack.length;
+    refreshAutoButton();
   }
   function fmtLen(mm) { return (mm / 1000).toFixed(2) + ' m'; }
   function fmtG(g) { return g >= 1000 ? (g / 1000).toFixed(2) + ' kg' : Math.round(g) + ' g'; }
@@ -1471,6 +1677,16 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
   function refreshHud() {
     const p = partMap[ui.activePart];
     const hud = $('#hud');
+    if (solving) { hud.innerHTML = '<b>Auto loop</b> · searching for pieces that close the track…<br><kbd>Esc</kbd> cancel'; return; }
+    if (suggest) {
+      const o = suggest.options[suggest.idx], n = suggest.options.length;
+      const names = {};
+      o.pieces.forEach((pc) => { const pp = partMap[pc.part]; const k = shortLabel(pp, pc).replace(/[↰↱]/g, ''); names[k] = (names[k] || 0) + 1; });
+      hud.innerHTML = `<b>Auto loop</b> · option ${suggest.idx + 1} of ${n} · ${o.pieces.length} piece${o.pieces.length === 1 ? '' : 's'}${o.adapters ? ` incl. ${o.adapters} adapter${o.adapters === 1 ? '' : 's'}` : ''}${o.outside ? ` · ${o.outside} outside workspace` : ''}<br>` +
+        `${Object.entries(names).map(([k, v]) => `${v}× ${esc(k)}`).join(', ')}<br>` +
+        `${n > 1 ? '<kbd>←</kbd><kbd>→</kbd> other options · ' : ''}<kbd>Enter</kbd> add these pieces · <kbd>Esc</kbd> cancel`;
+      return;
+    }
     if (ui.tool === 'place') {
       hud.innerHTML = `Placing <b>${esc(p ? p.name : '?')}</b> · ${ui.width} · ${p && p.type === 'curve' ? (ui.dir === 'L' ? 'left' : 'right') + ' · ' : ''}${Math.round(ui.rotation)}°<br>` +
         `Click to place · <kbd>↑</kbd><kbd>↓</kbd> curves · <kbd>←</kbd><kbd>→</kbd> straights · <kbd>R</kbd> rotate · <kbd>F</kbd> flip · <kbd>Enter</kbd> add to end · <kbd>V</kbd> select`;
@@ -1623,6 +1839,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
   function hitPiece(w) { for (let i = derived.pieces.length - 1; i >= 0; i--) if (localHit(derived.pieces[i], w.x, w.y, 0) >= 0) return derived.pieces[i].p.id; return null; }
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   canvas.addEventListener('pointerdown', (e) => {
+    if (suggest) cancelSuggest();
     canvas.focus();
     canvas.setPointerCapture(e.pointerId);
     const w = eventWorld(e), r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
@@ -1722,6 +1939,15 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
     const tag = (e.target.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'select' || tag === 'textarea' || e.target.isContentEditable) { if (e.key === 'Enter' && e.target.id === 'trackTitle') e.target.blur(); return; }
     if (!$('#modalBackdrop').hidden) { if (e.key === 'Escape') closeModal(); return; }
+    if (solving && e.key === 'Escape') { if (window.TinyTMTSolver.solveAsync.cancel) window.TinyTMTSolver.solveAsync.cancel(); return; }
+    if (suggest) {
+      const k2 = e.key, n = suggest.options.length;
+      if (k2 === 'ArrowRight' || k2 === 'ArrowDown') { e.preventDefault(); suggest.idx = (suggest.idx + 1) % n; refreshHud(); render(); return; }
+      if (k2 === 'ArrowLeft' || k2 === 'ArrowUp') { e.preventDefault(); suggest.idx = (suggest.idx - 1 + n) % n; refreshHud(); render(); return; }
+      if (k2 === 'Enter') { e.preventDefault(); acceptSuggest(); return; }
+      if (k2 === 'Escape') { cancelSuggest(); return; }
+      if (!['Shift', 'Control', 'Meta', 'Alt'].includes(k2)) cancelSuggest();
+    }
     const mod = e.ctrlKey || e.metaKey, k = e.key;
     if (mod && k.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
     if (mod && k.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
@@ -1739,6 +1965,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
       case 'f': case 'F': flip(); break;
       case 'w': case 'W': setWidth(ui.width === 'single' ? 'double' : 'single'); break;
       case 'v': case 'V': setTool('select'); break;
+      case 'l': case 'L': runAutoLoop(); break;
       case 'p': case 'P': setTool('place'); break;
       case 'Enter': e.preventDefault(); if (ui.tool !== 'place') setTool('place'); appendAtActiveEnd(); break;
       case 'Delete': case 'Backspace': e.preventDefault(); deleteSelection(); break;
@@ -1758,6 +1985,164 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     derived.pieces.forEach((d) => { x0 = Math.min(x0, d.bbox.x0); y0 = Math.min(y0, d.bbox.y0); x1 = Math.max(x1, d.bbox.x1); y1 = Math.max(y1, d.bbox.y1); });
     fitView({ x0: x0 - 150, y0: y0 - 150, x1: x1 + 150, y1: y1 + 150 });
+  }
+
+  /* ---------- auto loop ---------- */
+  let suggest = null; // { options: [{pieces, ds, adapters, outside}], idx, st }
+  let solving = false;
+  function autoCurveDefs() {
+    const vis = visibleParts().filter((p) => p.type === 'curve' && p.style !== 'digital');
+    const def = partMap[settings.defaultCurve];
+    const used = new Set(design.pieces.map((p) => p.part));
+    let list;
+    if (settings.autoCurves === 'all') list = vis;
+    else if (settings.autoCurves === 'cycle') list = cycleList('curve').filter((p) => p.style !== 'digital');
+    else if (settings.autoCurves === 'defaultIR') list = vis.filter((p) => def && p.ir === def.ir);
+    else {
+      const irs = new Set(design.pieces.map((p) => partMap[p.part]).filter((p) => p && p.type === 'curve').map((p) => p.ir));
+      if (def) irs.add(def.ir);
+      list = vis.filter((p) => irs.has(p.ir));
+    }
+    return list.map((p) => ({ id: p.id, ir: p.ir, angle: p.angle, pref: used.has(p.id) || p.id === settings.defaultCurve }));
+  }
+  function autoStraightDefs() {
+    return visibleParts().filter((p) => p.type === 'straight' && !p.rise && !p.obstacle && (p.group === 'straight' || (settings.autoAdapters && p.group === 'adapter')))
+      .map((p) => ({ id: p.id, length: p.length, adapter: p.group === 'adapter' }));
+  }
+  function effectiveMaxCurves(nTypes) {
+    let M = settings.autoMaxCurves; const b = Math.max(2, 2 * nTypes);
+    while (M > 2 && Math.pow(b, M) > 4e6) M--;
+    return M;
+  }
+  /** Picks the two loose ends to join and decides, cheaply, whether a closure is even possible. */
+  function autoLoopEnds() {
+    if (!design.pieces.length) return { reason: 'Place some track first.' };
+    if (!derived.openConnectors.length) return { reason: 'The track is already a closed loop.' };
+    const comps = [], seen = new Set();
+    derived.pieces.forEach((d) => { if (seen.has(d.p.id)) return; const c = chainOf(d.p.id); c.forEach((id) => seen.add(id)); comps.push(c); });
+    const opensOf = (comp) => derived.openConnectors.filter((c) => comp.has(c.pid));
+    const ac = activeConn();
+    let ends = null;
+    if (ac) { const comp = comps.find((c) => c.has(ac.pid)); if (comp) { const o = opensOf(comp); if (o.length === 2) ends = o; } }
+    if (!ends) { const two = comps.map(opensOf).filter((o) => o.length === 2); if (two.length === 1 || (two.length && comps.length === 1)) ends = two[0]; else if (two.length) ends = two.sort((x, y) => y.length - x.length)[0]; }
+    if (!ends) return { reason: comps.length > 1 ? 'Auto loop joins the two loose ends of one run of track — connect or remove the separate pieces first.' : 'Auto loop needs exactly two loose ends.' };
+    let [a, b] = ends;
+    if (ac && b.pid === ac.pid && b.end === ac.end) [a, b] = [b, a];
+    else if (!(ac && a.pid === ac.pid && a.end === ac.end) && a.end === 0 && b.end === 1) [a, b] = [b, a];
+    if (a.width !== b.width) return { reason: 'The two loose ends are different widths.' };
+    if (Math.abs(a.z - b.z) > 0.5) return { reason: `The loose ends are at different heights (${Math.round(a.z)} mm and ${Math.round(b.z)} mm) — auto loop doesn't add ramps.` };
+    const curves = autoCurveDefs(), straights = autoStraightDefs();
+    const tw = W(a.width), startH = a.out, targetH = G.norm(b.out + 180);
+    const diff = G.norm(targetH - startH);
+    let turn = Math.min(diff, 360 - diff);
+    // Same heading but the target is behind the start: the track has to come all the way round (360°).
+    const ux = Math.cos(startH * G.D2R), uy = Math.sin(startH * G.D2R);
+    if (turn < 1e-6 && ((b.x - a.x) * ux + (b.y - a.y) * uy) < -1) turn = 360;
+    if (turn > 1e-6 && !curves.length) return { reason: 'No curves are available to the solver — check Settings → Auto loop.' };
+    const maxAng = curves.reduce((m, c) => Math.max(m, c.angle), 0);
+    const nC = turn < 1e-6 ? 0 : Math.ceil(turn / maxAng - 1e-9);
+    const budget = settings.autoMaxPieces, maxC = effectiveMaxCurves(curves.length);
+    if (nC > Math.min(budget, maxC)) return { reason: `The loose ends need at least ${nC} curves to line up — more than the ${Math.min(budget, maxC)} allowed.` };
+    const chordMax = curves.reduce((m, c) => Math.max(m, 2 * (c.ir + tw / 2) * Math.sin(c.angle * G.D2R / 2)), 0);
+    const Lmax = straights.reduce((m, s) => Math.max(m, s.length), 0);
+    const reach = nC * chordMax + (budget - nC) * Math.max(Lmax, chordMax);
+    const dist = Math.hypot(b.x - a.x, b.y - a.y);
+    if (dist > reach + 1) return { tooFar: true, reason: `The loose ends are ${(dist / 1000).toFixed(2)} m apart — further than ${budget} added pieces can reach (about ${(reach / 1000).toFixed(2)} m). Build closer, or raise the limit in Settings → Auto loop.` };
+    return { a, b, dist, curves, straights, startH, targetH, W: tw, maxCurves: maxC, Lmax };
+  }
+  function refreshAutoButton() {
+    const btn = $('#tAutoLoop'); if (!btn) return;
+    const st = autoLoopEnds();
+    btn.classList.toggle('is-disabled', !!st.reason);
+    btn.setAttribute('aria-disabled', String(!!st.reason));
+    btn.title = st.reason ? `Auto loop unavailable — ${st.reason}` : `Auto loop (L) — find pieces that join the two loose ends (${(st.dist / 1000).toFixed(2)} m apart)`;
+  }
+  function buildChain(items, a, width) {
+    let pose = { x: a.x, y: a.y, a: a.out };
+    const pieces = [], ds = [];
+    for (const it of items) {
+      if (!partMap[it.id]) return null;
+      const p = { id: uid(), part: it.id, x: round3(pose.x), y: round3(pose.y), a: round3(G.norm(pose.a)), z: a.z, dir: it.dir < 0 ? 'L' : 'R', width };
+      const d = pieceGeom(p); pieces.push(p); ds.push(d);
+      pose = { x: d.conns[1].x, y: d.conns[1].y, a: d.conns[1].out };
+    }
+    return { pieces, ds, end: pose };
+  }
+  function validateChain(built, st) {
+    const e = built.end;
+    if (Math.hypot(e.x - st.b.x, e.y - st.b.y) > 1.4 || G.angDiff(e.a, st.targetH) > 0.5) return { ok: false };
+    const ds = built.ds;
+    const ws = derived.workspace, ov = derived.overflow;
+    const inside = (r, q) => q.x >= r.x0 - 0.5 && q.x <= r.x1 + 0.5 && q.y >= r.y0 - 0.5 && q.y <= r.y1 + 0.5;
+    let outside = 0;
+    for (const d of ds) { if (!d.outline.every((q) => inside(ov, q))) return { ok: false }; if (!d.outline.every((q) => inside(ws, q))) outside++; }
+    for (let i = 0; i < ds.length; i++) {
+      for (const o of derived.pieces) {
+        if ((i === 0 && o.p.id === st.a.pid) || (i === ds.length - 1 && o.p.id === st.b.pid)) continue;
+        if (overlaps(ds[i], o)) return { ok: false };
+      }
+      for (let j = i + 2; j < ds.length; j++) if (overlaps(ds[i], ds[j])) return { ok: false };
+    }
+    return { ok: true, outside };
+  }
+  async function runAutoLoop() {
+    if (solving) return;
+    const st = autoLoopEnds();
+    if (st.reason) { toast(st.reason, 4000); return; }
+    cancelSuggest();
+    solving = true; $('#tAutoLoop').classList.add('busy'); refreshHud();
+    const before = snap();
+    const params = {
+      start: { x: st.a.x, y: st.a.y, a: st.a.out }, target: { x: st.b.x, y: st.b.y, a: st.targetH },
+      curves: st.curves, straights: st.straights, W: st.W, maxPieces: settings.autoMaxPieces, maxCurves: st.maxCurves,
+      maxGap: settings.autoMaxPieces * st.Lmax, tol: 1.2, timeLimit: settings.autoTimeLimit * 1000, maxResults: 150
+    };
+    let out;
+    try { out = await window.TinyTMTSolver.solveAsync(params); }
+    catch (err) { solving = false; $('#tAutoLoop').classList.remove('busy'); refreshHud(); if (err.message !== 'cancelled') toast('Auto loop stopped: ' + err.message); else toast('Auto loop cancelled.'); return; }
+    solving = false; $('#tAutoLoop').classList.remove('busy');
+    if (snap() !== before) { refreshHud(); toast('The design changed while searching — press Auto loop again.'); return; }
+    const opts = [];
+    for (const r of out.results) {
+      const built = buildChain(r.items, st.a, st.a.width);
+      if (!built) continue;
+      const v = validateChain(built, st);
+      if (!v.ok) continue;
+      opts.push({ pieces: built.pieces, ds: built.ds, adapters: r.adapters, outside: v.outside, score: r.score + v.outside * 15 });
+      if (opts.length >= 15) break;
+    }
+    opts.sort((x, y) => x.score - y.score);
+    if (!opts.length) {
+      let msg;
+      if (out.results.length) msg = 'Closures exist, but every one found would overlap existing track or run off the overflow area.';
+      else if (out.nearest != null && out.nearest < 40) msg = `No exact closure with these pieces — the nearest leaves a ${out.nearest.toFixed(1)} mm gap.` + (settings.autoAdapters ? ' Try allowing more pieces or curve sizes in Settings → Auto loop.' : ' Try allowing closure adapters in Settings → Auto loop.');
+      else msg = 'No closure found within the piece and curve limits in Settings → Auto loop.';
+      if (out.timedOut) msg += ' (The search hit its time limit.)';
+      refreshHud(); toast(msg, 6000); return;
+    }
+    suggest = { options: opts.slice(0, 3), idx: 0, st };
+    refreshHud(); render();
+  }
+  function acceptSuggest() {
+    if (!suggest) return;
+    const o = suggest.options[suggest.idx];
+    suggest = null;
+    mutate(() => design.pieces.push(...o.pieces));
+    activeEnd = null;
+    toast(derived.stats.openEnds === 0 ? `Loop closed — ${o.pieces.length} piece${o.pieces.length === 1 ? '' : 's'} added.` : `${o.pieces.length} pieces added.`);
+    refresh();
+  }
+  function cancelSuggest() { if (suggest) { suggest = null; refreshHud(); render(); } }
+  function drawSuggestion(ds) {
+    const px = 1 / view.s;
+    ds.forEach((d) => {
+      poly(d.outline); ctx.closePath();
+      ctx.fillStyle = 'rgba(46,158,106,.20)'; ctx.fill();
+      ctx.setLineDash([6 * px, 4 * px]); ctx.lineWidth = 1.8 * px; ctx.strokeStyle = '#2e9e6a'; ctx.stroke(); ctx.setLineDash([]);
+      ctx.lineWidth = Math.max(d.wallT, 1.4 * px); ctx.strokeStyle = 'rgba(29,122,79,.7)';
+      poly(d.railL); ctx.stroke(); poly(d.railR); ctx.stroke();
+      if (settings.showLabels && d.W * view.s > 34) labelAt(d, d.shortLabel, '#1d7a4f');
+    });
   }
 
   /* ---------- modal / toast ---------- */
@@ -1891,6 +2276,13 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
       ['floorThickness', 'Floor thickness', 'mm'], ['defaultWidth', 'Default width', '', ['single', 'double']],
       ['defaultStraight', 'Default straight', '', 'straights'], ['defaultCurve', 'Default curve', '', 'curves'], ['clearance', 'Pass-under clearance', 'mm between levels']
     ],
+    'Auto loop': [
+      ['autoMaxPieces', 'Max pieces to add', 'pieces · also sets how far apart the ends can be'],
+      ['autoMaxCurves', 'Max curves to add', 'curves (lowered automatically if the search would be too big)'],
+      ['autoCurves', 'Curves the solver may use', '', [['design', 'Curve sizes already in the design'], ['defaultIR', 'Default curve size only'], ['cycle', 'Arrow-key cycle curves'], ['all', 'All curves (slower)']]],
+      ['autoAdapters', 'Allow closure adapters (S121, S236, D71, D141)', 'bool'],
+      ['autoTimeLimit', 'Search time limit', 'seconds']
+    ],
     Printing: [
       ['density', 'Material density', 'g/cm³ (PETG ≈ 1.27)'], ['filamentDiameter', 'Filament diameter', 'mm'], ['solidity', 'Solidity factor', '0–1 (walls/infill)'],
       ['jointVolume', 'Connector allowance', 'cm³ per piece'], ['gramsPerHour', 'Print throughput', 'g per hour'], ['overheadMin', 'Per-plate overhead', 'min (heat-up, purge)'],
@@ -1912,7 +2304,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
       body.innerHTML = `<div class="form-grid">${FIELDS[t].map(([k, label, unit, opt]) => {
         if (unit === 'bool') return `<div class="field check"><input type="checkbox" id="f_${k}" ${work[k] ? 'checked' : ''}><label for="f_${k}">${label}</label></div>`;
         if (opt) {
-          const list = opt === 'straights' ? straightsOpts() : opt === 'curves' ? curveOpts() : opt.map((v) => [v, v]);
+          const list = opt === 'straights' ? straightsOpts() : opt === 'curves' ? curveOpts() : opt.map((v) => (Array.isArray(v) ? v : [v, v]));
           return `<div class="field"><label for="f_${k}">${label}</label><select id="f_${k}">${list.map(([v, l]) => `<option value="${v}" ${String(work[k]) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${unit ? `<small>${unit}</small>` : ''}</div>`;
         }
         const type = unit === 'text' ? 'text' : 'number';
@@ -1920,7 +2312,8 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
       }).join('')}</div>`;
       FIELDS[t].forEach(([k, , unit, opt]) => {
         const el = $('#f_' + k, body);
-        el.onchange = () => { work[k] = unit === 'bool' ? el.checked : unit === 'text' || (opt && typeof opt === 'string') || k === 'wheel' || k === 'defaultWidth' ? el.value : parseFloat(el.value); };
+        const firstOpt = Array.isArray(opt) ? (Array.isArray(opt[0]) ? opt[0][0] : opt[0]) : null;
+        el.onchange = () => { work[k] = unit === 'bool' ? el.checked : unit === 'text' || (opt && typeof opt === 'string') || typeof firstOpt === 'string' ? el.value : parseFloat(el.value); };
       });
     }
     function showParts() {
@@ -1980,6 +2373,9 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
   function applySettings(work) {
     ['workspaceW', 'workspaceH', 'gridSize', 'laneWidth', 'wallHeight', 'density', 'filamentDiameter', 'gramsPerHour'].forEach((k) => { if (!(work[k] > 0)) work[k] = DEFAULT_SETTINGS[k]; });
     work.solidity = Math.min(1, Math.max(0.05, work.solidity || DEFAULT_SETTINGS.solidity));
+    work.autoMaxPieces = Math.round(Math.min(16, Math.max(1, work.autoMaxPieces || DEFAULT_SETTINGS.autoMaxPieces)));
+    work.autoMaxCurves = Math.round(Math.min(10, Math.max(0, isFinite(work.autoMaxCurves) ? work.autoMaxCurves : DEFAULT_SETTINGS.autoMaxCurves)));
+    work.autoTimeLimit = Math.min(30, Math.max(1, work.autoTimeLimit || DEFAULT_SETTINGS.autoTimeLimit));
     settings = work; LS.set(KEYS.settings, settings);
     buildParts(); buildPalette(); refresh(); fitView(); toast('Settings saved.');
   }
@@ -1989,7 +2385,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
       ['Place tool / Select tool', 'P / V'], ['Cycle curves', '↑ ↓'], ['Cycle straight lengths', '← →'], ['Rotate (ghost or selection)', 'R / Shift R'],
       ['Flip curve direction', 'F'], ['Toggle single / double width', 'W'], ['Add piece at active end', 'Enter'], ['Delete selection / last piece', 'Del / ⌫'],
       ['Undo / Redo', 'Ctrl Z / Ctrl ⇧ Z'], ['Save / Open', 'Ctrl S / Ctrl O'], ['Blueprint PNG', 'Ctrl E'], ['Select all', 'Ctrl A'],
-      ['Pan', 'Space-drag · right/middle drag'], ['Sample tracks', '? menu'], ['Zoom', 'Wheel · + / −'], ['Fit workspace / fit track', '0 / 9'], ['Select connected chain', 'Double-click']
+      ['Auto loop — close the track', 'L'], ['Pan', 'Space-drag · right/middle drag'], ['Sample tracks', '? menu'], ['Zoom', 'Wheel · + / −'], ['Fit workspace / fit track', '0 / 9'], ['Select connected chain', 'Double-click']
     ];
     modal({
       title: 'TinyTMT track designer — how to', html: `
@@ -2050,6 +2446,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
   $('#tRotate').onclick = () => rotateSelection(1);
   $('#tFlip').onclick = flip;
   $('#tDelete').onclick = deleteSelection;
+  $('#tAutoLoop').onclick = () => runAutoLoop();
   $('#tUndo').onclick = undo; $('#tRedo').onclick = redo;
   $('#tZoomIn').onclick = () => { const r = canvas.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.25); };
   $('#tZoomOut').onclick = () => { const r = canvas.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 0.8); };
@@ -2071,7 +2468,7 @@ window.TinyTMTSamples = [{"format":"tinytmt-design","version":1,"id":"a874d71660
   buildPalette(); syncControls(); setTool(ui.tool === 'select' ? 'select' : 'place');
   requestAnimationFrame(() => { design.pieces.length ? fitToTrack() : fitView(); refresh(); if (design.pieces.length) activeEnd = { pid: design.pieces[design.pieces.length - 1].id, end: 1 }; render(); });
   if (!LS.get('tinytmt.seenHelp', false)) { LS.set('tinytmt.seenHelp', true); setTimeout(showHelp, 400); }
-  window.__tinytmt = { get design() { return design; }, get derived() { return derived; }, appendAtActiveEnd, setActivePart, cycle, undo, redo, exportPng, saveToLibrary, view, fitView, toWorld, placeGhost, updateGhost, setTool, get ghost() { return ghost; } };
+  window.__tinytmt = { refresh: () => { cleanupRefs(); refresh(); }, runAutoLoop, acceptSuggest, autoLoopEnds, get suggest() { return suggest; }, get solving() { return solving; }, get design() { return design; }, get derived() { return derived; }, appendAtActiveEnd, setActivePart, cycle, undo, redo, exportPng, saveToLibrary, view, fitView, toWorld, placeGhost, updateGhost, setTool, get ghost() { return ghost; } };
 })();
 
 </script>
