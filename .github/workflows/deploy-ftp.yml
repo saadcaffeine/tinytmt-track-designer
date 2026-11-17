@@ -15,7 +15,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps              # use "ftp" if your host doesn't support FTPS
-          server-dir: /public_html/tinytmt-trackdesigner/
+          server-dir: /tinytmt-trackdesigner/
           exclude: |
             **/.git*
             **/.git*/**
