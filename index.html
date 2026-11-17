@@ -42,7 +42,15 @@
       </div>
       <span class="addon-slot" id="addonSlot"></span>
       <button class="icon-btn" id="btnSettings" title="Settings" aria-label="Settings">⚙</button>
-      <button class="icon-btn" id="btnHelp" title="Keyboard shortcuts (?)" aria-label="Help">?</button>
+      <div class="menu">
+        <button class="icon-btn" id="btnHelp" title="Help" aria-label="Help" aria-haspopup="true" aria-expanded="false">?</button>
+        <div class="menu-list" id="helpMenu" role="menu" hidden>
+          <button role="menuitem" data-help="help">How to &amp; shortcuts <kbd>?</kbd></button>
+          <button role="menuitem" data-help="samples">Sample tracks…</button>
+          <hr />
+          <button role="menuitem" data-help="repo">Source on GitHub ↗</button>
+        </div>
+      </div>
     </nav>
   </header>
 

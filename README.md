@@ -28,7 +28,7 @@ It's plain HTML/CSS/JS with no build step and no dependencies, and it works offl
 
 ## Sample tracks
 
-Five sample layouts ship with the app (**Open → Sample tracks**) and as files in `examples/`:
+Five sample layouts ship with the app (**? menu → Sample tracks…**) and as files in `examples/`:
 
 | Track | What it teaches | Pieces |
 |---|---|---|

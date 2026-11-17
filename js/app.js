@@ -220,7 +220,22 @@
   }
   function sortKey(p) {
     const g = { straight: 'a', curve: 'b', ramp: 'c' }[p.group] || 'd';
-    return p.type === 'curve' ? `${g}${String(p.ir).padStart(4, '0')}${String(p.angle).padStart(3, '0')}${p.style || ''}` : `${g}${String(p.length).padStart(4, '0')}`;
+    // curves: by inner radius, then widest turn first (90° → 15°), smooth before digital
+    return p.type === 'curve' ? `${g}${String(p.ir).padStart(4, '0')}${p.style === 'digital' ? 1 : 0}${String(999 - p.angle).padStart(3, '0')}` : `${g}${String(p.length).padStart(4, '0')}`;
+  }
+  /* ---------- colour families: one hue per piece family, used in palette, canvas and BoM ---------- */
+  const IR_HUES = { 150: 172, 200: 265, 250: 325, 300: 122 };
+  function familyOf(part) {
+    if (part && part.type === 'curve') return { key: 'ir' + part.ir, label: `IR ${part.ir} mm`, hue: IR_HUES[part.ir] != null ? IR_HUES[part.ir] : (part.ir * 47) % 360 };
+    if (part && part.group === 'ramp') return { key: 'ramp', label: 'Ramps & levels', hue: 40 };
+    return { key: 'straight', label: 'Straights', hue: 218 };
+  }
+  const famCache = {};
+  function famColors(part) {
+    const f = familyOf(part);
+    return famCache[f.key + f.hue] || (famCache[f.key + f.hue] = {
+      hue: f.hue, accent: `hsl(${f.hue} 62% 45%)`, floor: `hsl(${f.hue} 78% 91%)`, wall: `hsl(${f.hue} 55% 28%)`, soft: `hsl(${f.hue} 80% 96%)`, edge: `hsla(${f.hue} 55% 28% / .45)`
+    });
   }
   function computeStats(out) {
     const s = { length: 0, pieces: out.pieces.length, supports: out.bom.supports, grams: 0, minutes: 0 };
@@ -536,9 +551,10 @@
     const px = 1 / view.s, up = d.z0 > 0.5 || d.z1 > 0.5;
     poly(d.outline); ctx.closePath();
     if (st.sel) { ctx.save(); ctx.strokeStyle = COL.sel; ctx.lineWidth = 6 * px; ctx.globalAlpha = 0.35; ctx.stroke(); ctx.restore(); }
-    ctx.fillStyle = st.bad ? COL.badFloor : up ? COL.upFloor : COL.floor; ctx.fill();
-    ctx.lineWidth = px; ctx.strokeStyle = st.bad ? COL.badWall : 'rgba(34,64,122,.45)'; ctx.stroke();
-    const wall = st.bad ? COL.badWall : up ? COL.upWall : COL.wall;
+    const fam = famColors(d.part), raisedFlat = up && d.part.group !== 'ramp';
+    ctx.fillStyle = st.bad ? COL.badFloor : raisedFlat ? COL.upFloor : fam.floor; ctx.fill();
+    ctx.lineWidth = px; ctx.strokeStyle = st.bad ? COL.badWall : fam.edge; ctx.stroke();
+    const wall = st.bad ? COL.badWall : raisedFlat ? COL.upWall : fam.wall;
     ctx.strokeStyle = wall; ctx.lineWidth = Math.max(d.wallT, 1.6 * px); ctx.lineCap = 'butt';
     poly(d.railL); ctx.stroke(); poly(d.railR); ctx.stroke();
     if (settings.showCenterline && d.W * view.s > 18) { ctx.setLineDash([5 * px, 5 * px]); ctx.lineWidth = px; ctx.strokeStyle = COL.center; poly(d.center); ctx.stroke(); ctx.setLineDash([]); }
@@ -631,7 +647,7 @@
     if (!rows.length) bom.innerHTML = '<div class="empty">No pieces yet.<br>Pick a piece on the left and click the grid — or press <kbd>Enter</kbd> to start a track.</div>';
     else {
       bom.innerHTML = `<table class="bom-table"><thead><tr><th>Qty</th><th>Part</th><th class="n">g</th><th class="n">Time</th></tr></thead><tbody>` +
-        rows.map((r) => `<tr><td><span class="qty">${r.qty}</span></td><td>${esc(r.name)}${r.width === 'double' ? ' <b>· double</b>' : ''}
+        rows.map((r) => `<tr><td><span class="qty" style="background:${famColors(r.part || { group: 'ramp' }).accent}">${r.qty}</span></td><td>${esc(r.name)}${r.width === 'double' ? ' <b>· double</b>' : ''}
           <span class="sub">${r.L || r.R ? [r.L ? `${r.L}× left` : '', r.R ? `${r.R}× right` : ''].filter(Boolean).join(', ') + ' · ' : ''}${r.usedAsRamp ? `${r.usedAsRamp}× as ramp bed · ` : ''}${sourceLink(r.source)}</span></td>
           <td class="n">${Math.round(r.gramsTotal)}<span class="sub">${Math.round(r.gramsEach)} ea</span></td><td class="n">${BP.fmtTime(r.minutesTotal)}</td></tr>`).join('') +
         `</tbody><tfoot><tr><td>${rows.reduce((a, r) => a + r.qty, 0)}</td><td>Total to print</td><td class="n">${fmtG(st.grams)}</td><td class="n">${BP.fmtTime(st.minutes)}</td></tr></tfoot></table>
@@ -680,21 +696,36 @@
   function buildPalette() {
     const host = $('#paletteGroups'), q = ($('#partSearch').value || '').toLowerCase();
     host.innerHTML = '';
+    const makeCard = (p) => {
+      const b = document.createElement('button'), fam = famColors(p);
+      b.className = 'pcard' + (p.id === ui.activePart ? ' on' : ''); b.dataset.part = p.id; b.title = p.name + (p.nominal ? ' (nominal dimensions)' : '');
+      b.style.setProperty('--fam', fam.accent); b.style.setProperty('--fam-soft', fam.soft);
+      const meta = p.type === 'curve' ? `${p.angle}° · IR ${p.ir}${p.style === 'digital' ? ' · digital' : ''}` : p.rise ? `${p.rise > 0 ? '+' : ''}${p.rise} mm · ${p.length} plan` : `${p.length} mm`;
+      const title = p.type === 'curve' ? `${p.angle}° curve` : p.name;
+      b.innerHTML = `${p.id === settings.defaultStraight || p.id === settings.defaultCurve ? '<span class="pdef">DEFAULT</span>' : ''}<canvas></canvas><div class="pname">${esc(title)}</div><div class="pmeta">${meta}</div>`;
+      requestAnimationFrame(() => drawThumb($('canvas', b), p));
+      b.addEventListener('pointerdown', (e) => startPaletteDrag(e, p.id));
+      return b;
+    };
+    const section = (parent, label, fam, items, note) => {
+      const head = document.createElement('div'); head.className = 'psub';
+      head.style.setProperty('--fam', fam.accent);
+      head.innerHTML = `<i></i><span>${esc(label)}</span>${note ? `<small>${esc(note)}</small>` : ''}`;
+      const grid = document.createElement('div'); grid.className = 'pgrid';
+      items.forEach((p) => grid.appendChild(makeCard(p)));
+      parent.appendChild(head); parent.appendChild(grid);
+    };
     P.GROUPS.forEach((grp) => {
-      const items = visibleParts().filter((p) => p.group === grp.id && (!q || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)));
+      const items = visibleParts().filter((p) => p.group === grp.id && (!q || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)))
+        .sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : 1));
       if (!items.length) return;
       const det = document.createElement('details'); det.className = 'pgroup'; det.open = true;
-      det.innerHTML = `<summary><span class="grp-label">${grp.label}</span>${grp.hint ? `<kbd>${grp.hint}</kbd>` : ''}</summary><div class="pgrid"></div>`;
-      const grid = $('.pgrid', det);
-      items.sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : 1)).forEach((p) => {
-        const b = document.createElement('button');
-        b.className = 'pcard' + (p.id === ui.activePart ? ' on' : ''); b.dataset.part = p.id; b.title = p.name + (p.nominal ? ' (nominal dimensions)' : '');
-        const meta = p.type === 'curve' ? `${p.angle}° · IR ${p.ir}` : p.rise ? `${p.rise > 0 ? '+' : ''}${p.rise} mm · ${p.length} plan` : `${p.length} mm`;
-        b.innerHTML = `${p.id === settings.defaultStraight || p.id === settings.defaultCurve ? '<span class="pdef">DEFAULT</span>' : ''}<canvas></canvas><div class="pname">${esc(p.name)}</div><div class="pmeta">${meta}</div>`;
-        grid.appendChild(b);
-        requestAnimationFrame(() => drawThumb($('canvas', b), p));
-        b.addEventListener('pointerdown', (e) => startPaletteDrag(e, p.id));
-      });
+      det.innerHTML = `<summary><span class="grp-label">${grp.label}</span>${grp.hint ? `<kbd>${grp.hint}</kbd>` : ''}</summary><div class="pbody"></div>`;
+      const body = $('.pbody', det);
+      if (grp.id === 'curve') {
+        const irs = [...new Set(items.map((p) => p.ir))].sort((a, b) => a - b);
+        irs.forEach((ir) => { const its = items.filter((p) => p.ir === ir); section(body, `Inner radius ${ir} mm`, famColors(its[0]), its, `Ø ${ir * 2}`); });
+      } else section(body, grp.id === 'ramp' ? 'Ramp beds & lower-level runs' : 'Straight lengths', famColors(items[0]), items);
       host.appendChild(det);
     });
   }
@@ -707,8 +738,9 @@
     const b = d.bbox, pad = 6 * dpr, sc = Math.min((cv.width - 2 * pad) / (b.x1 - b.x0), (cv.height - 2 * pad) / (b.y1 - b.y0));
     c.setTransform(sc, 0, 0, sc, cv.width / 2 - ((b.x0 + b.x1) / 2) * sc, cv.height / 2 - ((b.y0 + b.y1) / 2) * sc);
     const pl = (pts) => { c.beginPath(); pts.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y))); };
-    pl(d.outline); c.closePath(); c.fillStyle = part.rise ? COL.upFloor : COL.floor; c.fill();
-    c.strokeStyle = part.rise ? COL.upWall : COL.wall; c.lineWidth = Math.max(w * 0.05, 1.5 / sc);
+    const fam = famColors(part);
+    pl(d.outline); c.closePath(); c.fillStyle = fam.floor; c.fill();
+    c.strokeStyle = fam.wall; c.lineWidth = Math.max(w * 0.05, 1.5 / sc);
     pl(d.railL); c.stroke(); pl(d.railR); c.stroke();
   }
   function startPaletteDrag(e, partId) {
@@ -964,14 +996,11 @@
     const lib = library(), entries = Object.values(lib).sort((a, b) => (a.savedAt < b.savedAt ? 1 : -1));
     const node = document.createElement('div');
     node.innerHTML = `<div class="row-btns" style="margin:0 0 14px"><button class="sbtn primary" data-l="import">Import design file…</button><span class="note" style="align-self:center">Designs are stored in this browser only. Export files to back them up or share.</span></div>` +
-      ((window.TinyTMTSamples || []).length ? `<h3 style="font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.5px;color:#667085">Sample tracks</h3><div class="lib-grid" style="margin-bottom:18px">${window.TinyTMTSamples.map((sm, i) => `<div class="lib-card"><div class="meta"><strong>${esc(sm.title)}</strong>${esc(sm.blurb || '')}<br>${sm.pieces.length} pieces${sm.pieces[0] && sm.pieces[0].width === 'double' ? ' · double width' : ''}</div><div class="row-btns"><button class="sbtn primary" data-sample="${i}">Open sample</button></div></div>`).join('')}</div><h3 style="font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.5px;color:#667085">Your saved designs</h3>` : '') +
       (entries.length ? `<div class="lib-grid">${entries.map((en) => `<div class="lib-card" data-id="${en.design.id}">${en.thumb ? `<img src="${en.thumb}" alt="">` : '<img alt="">'}
         <div class="meta"><strong>${esc(en.design.title)}</strong>${new Date(en.savedAt).toLocaleString()}<br>${en.stats ? `${en.stats.pieces} pieces · ${fmtLen(en.stats.length)}` : ''}</div>
         <div class="row-btns"><button class="sbtn primary" data-l="open">Open</button><button class="sbtn" data-l="dup">Duplicate</button><button class="sbtn" data-l="dl" title="Download .json">⬇</button><button class="sbtn danger" data-l="del">Delete</button></div></div>`).join('')}</div>`
         : '<div class="empty">No saved designs yet. Press <kbd>Ctrl S</kbd> to save the current one.</div>');
     node.addEventListener('click', async (e) => {
-      const sb = e.target.closest('[data-sample]');
-      if (sb) { const d = clone(window.TinyTMTSamples[+sb.dataset.sample]); d.id = uid(); delete d.blurb; closeModal(); if (await loadDesign(d, { dirty: true })) { fitToTrack(); toast(`Opened sample “${design.title}” — save it to keep your changes.`); } return; }
       const b = e.target.closest('[data-l]'); if (!b) return;
       if (b.dataset.l === 'import') { closeModal(); $('#fileInput').click(); return; }
       const id = b.closest('.lib-card').dataset.id, en = library()[id]; if (!en) return;
@@ -984,6 +1013,23 @@
       }
     });
     modal({ title: 'Saved designs', node });
+  }
+
+  function openSamples() {
+    const list = window.TinyTMTSamples || [];
+    const node = document.createElement('div');
+    const saved = design;
+    const thumbs = list.map((sm) => { try { design = sm; const dv = derive(); return BP.render(dv, sm, settings, { mini: true, width: 320 }).toDataURL('image/jpeg', 0.8); } catch (e) { return ''; } finally { design = saved; } });
+    derived = derive();
+    node.innerHTML = `<p class="note" style="margin-top:0">Ready-made courses to start from. Opening one replaces the current design (you'll be asked first if it has unsaved changes).</p>
+      <div class="lib-grid">${list.map((sm, i) => `<div class="lib-card">${thumbs[i] ? `<img src="${thumbs[i]}" alt="">` : ''}<div class="meta"><strong>${esc(sm.title)}</strong>${esc(sm.blurb || '')}<br>${sm.pieces.length} pieces${sm.pieces[0] && sm.pieces[0].width === 'double' ? ' · double width' : ''}</div>
+      <div class="row-btns"><button class="sbtn primary" data-sample="${i}">Open</button></div></div>`).join('')}</div>`;
+    node.addEventListener('click', async (e) => {
+      const sb = e.target.closest('[data-sample]'); if (!sb) return;
+      const d = clone(list[+sb.dataset.sample]); d.id = uid(); delete d.blurb; closeModal();
+      if (await loadDesign(d, { dirty: true })) { fitToTrack(); toast(`Opened sample “${design.title}” — save it to keep your changes.`); }
+    });
+    modal({ title: 'Sample tracks', node });
   }
 
   /* ---------- settings ---------- */
@@ -1097,7 +1143,7 @@
       ['Place tool / Select tool', 'P / V'], ['Cycle curves', '↑ ↓'], ['Cycle straight lengths', '← →'], ['Rotate (ghost or selection)', 'R / Shift R'],
       ['Flip curve direction', 'F'], ['Toggle single / double width', 'W'], ['Add piece at active end', 'Enter'], ['Delete selection / last piece', 'Del / ⌫'],
       ['Undo / Redo', 'Ctrl Z / Ctrl ⇧ Z'], ['Save / Open', 'Ctrl S / Ctrl O'], ['Blueprint PNG', 'Ctrl E'], ['Select all', 'Ctrl A'],
-      ['Pan', 'Space-drag · right/middle drag'], ['Zoom', 'Wheel · + / −'], ['Fit workspace / fit track', '0 / 9'], ['Select connected chain', 'Double-click']
+      ['Pan', 'Space-drag · right/middle drag'], ['Sample tracks', '? menu'], ['Zoom', 'Wheel · + / −'], ['Fit workspace / fit track', '0 / 9'], ['Select connected chain', 'Double-click']
     ];
     modal({
       title: 'TinyTMT track designer — how to', html: `
@@ -1134,9 +1180,16 @@
   $('#btnOpen').onclick = openLibrary;
   $('#btnSave').onclick = saveToLibrary;
   $('#btnSettings').onclick = openSettings;
-  $('#btnHelp').onclick = showHelp;
+  const helpMenu = $('#helpMenu');
+  $('#btnHelp').onclick = (e) => { e.stopPropagation(); exportMenu.hidden = true; helpMenu.hidden = !helpMenu.hidden; $('#btnHelp').setAttribute('aria-expanded', String(!helpMenu.hidden)); };
+  helpMenu.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-help]'); if (!b) return;
+    helpMenu.hidden = true;
+    ({ help: showHelp, samples: openSamples, repo: () => window.open('https://github.com/saadcaffeine/tinytmt-track-designer', '_blank', 'noopener') })[b.dataset.help]();
+  });
+  document.addEventListener('click', () => { helpMenu.hidden = true; });
   const exportMenu = $('#exportMenu');
-  $('#btnExport').onclick = (e) => { e.stopPropagation(); exportMenu.hidden = !exportMenu.hidden; $('#btnExport').setAttribute('aria-expanded', String(!exportMenu.hidden)); };
+  $('#btnExport').onclick = (e) => { e.stopPropagation(); helpMenu.hidden = true; exportMenu.hidden = !exportMenu.hidden; $('#btnExport').setAttribute('aria-expanded', String(!exportMenu.hidden)); };
   document.addEventListener('click', () => { exportMenu.hidden = true; });
   exportMenu.addEventListener('click', (e) => {
     const b = e.target.closest('[data-export]'); if (!b) return;

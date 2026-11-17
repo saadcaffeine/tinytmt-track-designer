@@ -1,5 +1,5 @@
 /* Offline cache for TinyTMT track designer. Bump VERSION when files change. */
-const VERSION = 'tinytmt-v1.1.0';
+const VERSION = 'tinytmt-v1.2.0';
 const FILES = [
   './', 'index.html', 'css/styles.css', 'icon.svg', 'manifest.webmanifest',
   'js/parts.js', 'js/names.js', 'js/geometry.js', 'js/blueprint.js', 'js/samples.js', 'js/addons.js', 'js/app.js',
