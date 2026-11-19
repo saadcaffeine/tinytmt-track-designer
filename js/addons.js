@@ -14,7 +14,7 @@
  *
  * `api` (also available as TinyTMT.api) exposes read-only helpers:
  *   api.getDesign()    → deep copy of the current design JSON
- *   api.getDerived()   → computed geometry: pieces with world outlines, connectors, stats, BoM
+ *   api.getDerived()   → computed geometry: pieces with pose, z / zExit, world outlines, family colours, stats, BoM
  *   api.getParts()     → the active parts catalogue
  *   api.getSettings()  → current settings
  *   api.geom           → geometry helpers (TinyTMTGeom)
@@ -25,7 +25,7 @@
   const list = [];
   const listeners = {};
   const TinyTMT = root.TinyTMT || (root.TinyTMT = {});
-  TinyTMT.version = '1.4.0';
+  TinyTMT.version = '1.5.0';
   TinyTMT._emit = (ev, data) => (listeners[ev] || []).forEach((fn) => { try { fn(data); } catch (e) { console.error('[TinyTMT add-on]', e); } });
   TinyTMT._on = (ev, fn) => { (listeners[ev] = listeners[ev] || []).push(fn); return () => { listeners[ev] = listeners[ev].filter((f) => f !== fn); }; };
   TinyTMT.addons = {
