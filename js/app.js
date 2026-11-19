@@ -1363,7 +1363,7 @@
   /* ---------- add-ons ---------- */
   TinyTMT.api = {
     getDesign: () => clone(design), getParts: () => clone(parts), getSettings: () => clone(settings), geom: G,
-    getDerived: () => ({ pieces: derived.pieces.map((d) => ({ id: d.p.id, part: d.part.id, partDef: clone(d.part), width: d.p.width, W: d.W, dir: d.p.dir, pose: { x: d.p.x, y: d.p.y, a: d.p.a }, z: d.z0, zExit: d.z1, outline: d.outline.map((q) => ({ x: q.x, y: q.y })), center: d.center.map((q) => ({ x: q.x, y: q.y })), length: d.length })), stats: clone(derived.stats), bom: clone(derived.bom.rows.map((r) => Object.assign({}, r, { part: undefined }))), zMin: derived.zMin, zMax: derived.zMax, workspace: derived.workspace }),
+    getDerived: () => ({ pieces: derived.pieces.map((d) => ({ id: d.p.id, part: d.part.id, partDef: clone(d.part), width: d.p.width, W: d.W, dir: d.p.dir, pose: { x: d.p.x, y: d.p.y, a: d.p.a }, z: d.z0, zExit: d.z1, outline: d.outline.map((q) => ({ x: q.x, y: q.y })), center: d.center.map((q) => ({ x: q.x, y: q.y })), length: d.length, colors: clone(famColors(d.part)) })), stats: clone(derived.stats), bom: clone(derived.bom.rows.map((r) => Object.assign({}, r, { part: undefined }))), zMin: derived.zMin, zMax: derived.zMax, workspace: derived.workspace }),
     on: (ev, fn) => TinyTMT._on(ev, fn), modal: (o) => modal(o), toast: (m) => toast(m)
   };
   function renderAddon(a) {

@@ -9,7 +9,7 @@ Tracks are built from 3D-printable pieces in the **Tamiya Mini 4WD form factor**
 - [Mini 4WD Single Lane Modular Ramp Set](https://makerworld.com/en/models/1134169-mini-4wd-single-lane-modular-ramp-set)
 - [Mini4wd Single Lane Curve Track Pack](https://makerworld.com/en/models/1132759-mini4wd-single-lane-curve-track-pack)
 
-It's plain HTML/CSS/JS with no build step and no dependencies, and it works offline.
+It's plain HTML/CSS/JS with no build step, and it works offline. The only third-party code is a trimmed copy of [three.js](https://threejs.org) for the optional 3D view, which ships in `vendor/` and loads only when you open that view.
 
 ## Features
 
@@ -28,7 +28,7 @@ It's plain HTML/CSS/JS with no build step and no dependencies, and it works offl
 - Save and load designs in the browser (localStorage, offline). You can also import and export `.tinytmt.json` files.
 - **Blueprint PNG** export at any stage, with a title block, dimensions, a scale bar and the BoM.
 - Settings for the workspace, grid, snapping, track geometry, print estimation and the parts catalogue (show/hide pieces, arrow-key cycles, slicer overrides, custom pieces).
-- An add-on hook, with a placeholder **View in 3D** button.
+- **View in 3D**: a live 3D preview with an exploded view, a chair-height ride-along camera, and PNG / GLB / STL export. It is built as an add-on, so you can write your own the same way.
 
 ## Sample tracks
 
@@ -79,6 +79,23 @@ The button is greyed out, with the reason shown on hover, when a closure can't w
 
 How it works: every curve turns a multiple of 15°, so the solver first lists curve sequences that produce the right total turn. With the curves fixed, the direction of every straight run is known, so closing the gap becomes two small equations that it solves using the available straight lengths (and closure adapters, if allowed). Candidates are ranked by piece count, adapters used and whether they reuse curve sizes already in the design, then checked for overlaps and workspace limits. It runs in a background Web Worker with no dependencies, so it works offline.
 
+## View in 3D
+
+Press **🧊 View in 3D** in the top bar. The 3D view is rebuilt from the design, so it always matches the 2D plan. Floors and walls come from the track settings, ramps tilt between their entry and exit heights, supports appear under every raised joint (the same ones the BoM counts), and obstacle inserts appear as raised yellow shapes.
+
+| Control | What it does |
+|---|---|
+| Drag / right-drag / scroll | Orbit, pan and zoom |
+| **Iso · Top · Side** (`1` `2` `3`) | Camera presets that frame the whole track |
+| **▶ Ride along** (`R`) | Rides the connected track at Mini TMT chair eye height. It loops on a closed track. |
+| **Explode** (`E`) | Pulls the pieces apart so you can see the joints and supports |
+| **Export → Image (.png)** | Saves the current view |
+| **Export → 3D scene (.glb)** | For Blender, online viewers or AR |
+| **Export → Preview mesh (.stl)** | Z-up and in millimetres. Commit it to a repo and GitHub shows it in 3D. It is a preview of the layout, **not** the print files. |
+| `Esc` | Stops the ride, or closes the 3D view |
+
+The 3D view uses [three.js](https://threejs.org), the same WebGL library GitHub uses for its STL viewer. To keep the app working offline, and to avoid a CDN, `vendor/three-view3d.min.js` contains only the parts of three.js the viewer needs (≈650 kB, ≈165 kB gzipped). It is fetched the first time you open the 3D view. The standalone single-file build embeds it as well. To rebuild it, or to upgrade the three.js version, run `tools/three-bundle/build.sh` (it needs Node). Edit `tools/three-bundle/entry.js` if an add-on needs more classes.
+
 ## Keyboard
 
 | Action | Keys |
@@ -125,9 +142,11 @@ js/samples.js              built-in sample tracks
 examples/                  sample tracks as .tinytmt.json
 js/addons.js               add-on registry and API docs
 js/app.js                  editor
-addons/view3d-placeholder.js
+addons/view3d.js           View in 3D add-on (three.js)
+vendor/three-view3d.min.js three.js slice used by the 3D view (MIT)
 sw.js, manifest.webmanifest, icon.svg
 tools/build_standalone.py
+tools/three-bundle/        entry + build script for the three.js slice
 ```
 
 ## Writing an add-on
@@ -136,13 +155,13 @@ tools/build_standalone.py
 TinyTMT.addons.register({
   id: 'view3d', label: 'View in 3D', icon: '🧊',
   run(api) {
-    const { pieces } = api.getDerived(); // outlines, centre lines, z / zExit per piece
-    // build a three.js scene here…
+    const { pieces } = api.getDerived(); // pose, outline, centre line, z / zExit, colours per piece
+    api.toast(`${pieces.length} pieces`);
   }
 });
 ```
 
-Load the script after `js/app.js` in `index.html`. See `js/addons.js` for the full API. The MIT-licensed [Mini4WD Track Planner](https://github.com/filippocobelli/Mini4WD-Track-Manager) has a 3D engine that would be worth looking at for the 3D view.
+Load the script after `js/app.js` in `index.html`. See `js/addons.js` for the full API, and `addons/view3d.js` for a complete example. Also add the new file to `FILES` in `sw.js` so it works offline.
 
 ## Prior art
 
@@ -150,4 +169,4 @@ We looked at existing tools before building this one. The closest match is [Mini
 
 ## License
 
-The code is MIT-licensed (see `LICENSE`). The 3D models belong to their authors and are covered by their own licences on MakerWorld.
+The code is MIT-licensed (see `LICENSE`). three.js is © the three.js authors, under the MIT licence. The 3D models belong to their authors and are covered by their own licences on MakerWorld.
